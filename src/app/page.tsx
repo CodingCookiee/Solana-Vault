@@ -1,5 +1,7 @@
 import { WalletConnection } from "@/components/ui/client/WalletConnection";
 import { TransactionPanel } from "@/components/ui/client/TransactionPanel";
+import { AuthModal } from "@/components/ui/client/AuthModal";
+import { AuthFlowInfo } from "@/components/ui/client/AuthFlowInfo";
 import { Text } from "@/components/ui/common";
 
 export default function Home() {
@@ -58,6 +60,9 @@ export default function Home() {
         </header>
 
         <main className="space-y-8">
+          {/* Auth Flow Info */}
+          <AuthFlowInfo />
+          
           {/* Wallet Connection Section */}
           <section>
             <WalletConnection />
@@ -69,7 +74,7 @@ export default function Home() {
           </section>
 
           {/* Information Cards */}
-          <section className="grid md:grid-cols-3 gap-6 mt-12">
+          {/* <section className="grid md:grid-cols-3 gap-6 mt-12">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -123,7 +128,7 @@ export default function Home() {
                 near-instant transactions with minimal fees.
               </Text>
             </div>
-
+            
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
@@ -150,7 +155,7 @@ export default function Home() {
                 experienced users. Get started in seconds.
               </Text>
             </div>
-          </section>
+          </section> */}
 
           {/* Footer */}
           <footer className="text-center py-8 border-t border-gray-200 dark:border-gray-700 mt-16">
@@ -176,6 +181,9 @@ export default function Home() {
           </footer>
         </main>
       </div>
+      
+      {/* Auth Modal */}
+      {/* <AuthModal /> */}
     </div>
   );
 }

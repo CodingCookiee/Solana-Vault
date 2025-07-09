@@ -8,6 +8,7 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
+import { AuthGate } from "@/components/ui/client/AuthGate";
 import {
   Card,
   CardHeader,
@@ -113,40 +114,41 @@ export const TransactionPanel: FC = () => {
     }
   }, [publicKey, recipient, amount, connection, sendTransaction, getBalance]);
 
-  if (!publicKey) {
-    return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-            </div>
-            <Text variant="h4" color="muted" align="center">
-              Wallet Required
-            </Text>
-            <Text variant="small" color="muted" align="center">
-              Please connect your wallet to use transaction features
-            </Text>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // if (!publicKey) {
+  //   return (
+  //     <Card className="max-w-2xl mx-auto">
+  //       <CardContent className="py-12">
+  //         <div className="text-center space-y-4">
+  //           <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+  //             <svg
+  //               className="w-8 h-8 text-gray-400"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth={2}
+  //                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+  //               />
+  //             </svg>
+  //           </div>
+  //           <Text variant="h4" color="muted" align="center">
+  //             Wallet Required
+  //           </Text>
+  //           <Text variant="small" color="muted" align="center">
+  //             Please connect your wallet to use transaction features
+  //           </Text>
+  //         </div>
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <AuthGate>
       <Card>
         <CardHeader>
           <CardTitle>
@@ -358,6 +360,7 @@ export const TransactionPanel: FC = () => {
           </CardContent>
         </Card>
       )}
+      </AuthGate>
     </div>
   );
 };
