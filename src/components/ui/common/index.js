@@ -8,3 +8,4 @@ export {
   CardDescription,
   CardContent,
 } from "./card";
+export { Text } from "./text";
