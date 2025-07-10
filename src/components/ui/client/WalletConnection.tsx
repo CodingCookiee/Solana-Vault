@@ -75,6 +75,7 @@ export const WalletConnection: FC = () => {
                 <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md border">
                   <Text
                     variant="extraSmall"
+                    align="left"
                     className="font-mono break-all text-gray-700 dark:text-gray-300"
                   >
                     {publicKey.toBase58()}
