@@ -1,6 +1,7 @@
 import { WalletConnection } from "@/components/ui/client/WalletConnect/WalletConnection";
 import { TransactionPanel } from "@/components/ui/client/TransactionPanel/TransactionPanel";
 import { ProgramInteractions } from "@/components/ui/client/ProgramInteractions/ProgramInteractions";
+import { DevnetTokenOps } from "@/components/ui/client/DevnetTokenOps";
 import { AuthModal } from "@/components/ui/client/Auth/AuthModal";
 import { AuthFlowInfo } from "@/components/ui/client/Auth/AuthFlowInfo";
 import { Text } from "@/components/ui/common";
@@ -83,6 +84,13 @@ export default function Home() {
           {/* SPL Token Program Interactions */}
           <section>
             <ProgramInteractions />
+          </section>
+
+          
+
+          {/* Devnet Token Operations */}
+          <section>
+            <DevnetTokenOps />
           </section>
 
           {/* Information Cards */}
