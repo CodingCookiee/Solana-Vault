@@ -17,8 +17,10 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
+  CardDescription,
+  Button,
+  Text,
 } from "@/components/ui/common";
-import { Text } from "@/components/ui/common";
 
 // Devnet token addresses (these actually exist on devnet)
 const DEVNET_TOKENS = {
@@ -35,7 +37,10 @@ export const DevnetTokenOps: FC = () => {
   const [selectedToken, setSelectedToken] = useState(DEVNET_TOKENS.SOL);
   const [recipientAddress, setRecipientAddress] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isLoadingCreate, setIsLoadingCreate] = useState(false);
+  const [isLoadingTransfer, setIsLoadingTransfer] = useState(false);
+  const [isLoadingAirdrop, setIsLoadingAirdrop] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [tokenInfo, setTokenInfo] = useState<any>(null);
@@ -54,7 +59,7 @@ export const DevnetTokenOps: FC = () => {
     if (!publicKey || !selectedToken) return;
 
     try {
-      setIsLoading(true);
+      setIsLoadingBalance(true);
       const mintPubkey = new PublicKey(selectedToken);
       const userTokenAccount = getUserTokenAccount(mintPubkey);
 
@@ -83,7 +88,7 @@ export const DevnetTokenOps: FC = () => {
         `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     } finally {
-      setIsLoading(false);
+      setIsLoadingBalance(false);
     }
   }, [connection, publicKey, selectedToken, getUserTokenAccount]);
 
@@ -92,7 +97,7 @@ export const DevnetTokenOps: FC = () => {
     if (!publicKey || !sendTransaction || !selectedToken) return;
 
     try {
-      setIsLoading(true);
+      setIsLoadingCreate(true);
       setStatus("Creating token account...");
 
       const mintPubkey = new PublicKey(selectedToken);
@@ -105,6 +110,8 @@ export const DevnetTokenOps: FC = () => {
       const accountInfo = await connection.getAccountInfo(userTokenAccount);
       if (accountInfo) {
         setStatus("✅ Token account already exists");
+        // Still refresh balance after checking
+        setTimeout(() => getTokenInfo(), 1000);
         return;
       }
 
@@ -131,7 +138,7 @@ export const DevnetTokenOps: FC = () => {
         `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     } finally {
-      setIsLoading(false);
+      setIsLoadingCreate(false);
     }
   }, [
     connection,
@@ -141,6 +148,49 @@ export const DevnetTokenOps: FC = () => {
     getUserTokenAccount,
     getTokenInfo,
   ]);
+
+  // Validate if address is a wallet address or token account
+  const validateRecipientAddress = useCallback(
+    async (address: string) => {
+      try {
+        const pubkey = new PublicKey(address);
+        const accountInfo = await connection.getAccountInfo(pubkey);
+
+        if (!accountInfo) {
+          return {
+            isValid: true,
+            isWallet: true,
+            message: "New wallet address (will create token account)",
+          };
+        }
+
+        // Check if it's a token account by looking at the data length and owner
+        if (
+          accountInfo.owner.equals(TOKEN_PROGRAM_ID) &&
+          accountInfo.data.length === 165
+        ) {
+          return {
+            isValid: true,
+            isWallet: false,
+            message: "This is a token account address",
+          };
+        }
+
+        return {
+          isValid: true,
+          isWallet: true,
+          message: "Existing wallet address",
+        };
+      } catch (error) {
+        return {
+          isValid: false,
+          isWallet: false,
+          message: "Invalid address format",
+        };
+      }
+    },
+    [connection]
+  );
 
   // Transfer tokens
   const transferTokens = useCallback(async () => {
@@ -154,44 +204,71 @@ export const DevnetTokenOps: FC = () => {
       return;
 
     try {
-      setIsLoading(true);
-      setStatus("Transferring tokens...");
+      setIsLoadingTransfer(true);
+      setStatus("Validating recipient address...");
 
       const mintPubkey = new PublicKey(selectedToken);
-      const recipientPubkey = new PublicKey(recipientAddress);
+
+      // Validate recipient address
+      const validation = await validateRecipientAddress(recipientAddress);
+      if (!validation.isValid) {
+        throw new Error(`Invalid recipient address: ${validation.message}`);
+      }
 
       const sourceTokenAccount = getUserTokenAccount(mintPubkey);
-      const destinationTokenAccount = getAssociatedTokenAddressSync(
-        mintPubkey,
-        recipientPubkey
-      );
-
       if (!sourceTokenAccount)
         throw new Error("Cannot get source token account");
 
       if (!tokenInfo) {
-        throw new Error("Token info not loaded");
+        throw new Error("Token info not loaded - click 'Check Balance' first");
       }
 
       const amount = Math.floor(
         parseFloat(transferAmount) * Math.pow(10, tokenInfo.decimals)
       );
 
+      let destinationTokenAccount: PublicKey;
+      let recipientWallet: PublicKey;
+
+      if (validation.isWallet) {
+        // Recipient address is a wallet - derive token account
+        recipientWallet = new PublicKey(recipientAddress);
+        destinationTokenAccount = getAssociatedTokenAddressSync(
+          mintPubkey,
+          recipientWallet
+        );
+        setStatus(`Transferring to wallet address (${validation.message})...`);
+      } else {
+        // Recipient address is already a token account
+        destinationTokenAccount = new PublicKey(recipientAddress);
+
+        // Get the token account info to find the owner
+        const tokenAccountInfo = await getAccount(
+          connection,
+          destinationTokenAccount
+        );
+        recipientWallet = tokenAccountInfo.owner;
+        setStatus("Transferring to token account directly...");
+      }
+
       const transaction = new Transaction();
 
-      // Check if destination token account exists
-      const destAccountInfo = await connection.getAccountInfo(
-        destinationTokenAccount
-      );
-      if (!destAccountInfo) {
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            publicKey, // Payer
-            destinationTokenAccount, // Associated token account
-            recipientPubkey, // Owner
-            mintPubkey // Mint
-          )
+      // Check if destination token account exists (only if it's a derived address)
+      if (validation.isWallet) {
+        const destAccountInfo = await connection.getAccountInfo(
+          destinationTokenAccount
         );
+        if (!destAccountInfo) {
+          transaction.add(
+            createAssociatedTokenAccountInstruction(
+              publicKey, // Payer
+              destinationTokenAccount, // Associated token account
+              recipientWallet, // Owner
+              mintPubkey // Mint
+            )
+          );
+          setStatus("Creating destination token account and transferring...");
+        }
       }
 
       // Add transfer instruction
@@ -207,9 +284,7 @@ export const DevnetTokenOps: FC = () => {
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature, "confirmed");
 
-      setStatus(
-        `✅ Transferred ${transferAmount} tokens to ${recipientAddress}`
-      );
+      setStatus(`✅ Transferred ${transferAmount} tokens! Tx: ${signature}`);
 
       // Refresh balance
       setTimeout(() => getTokenInfo(), 2000);
@@ -219,11 +294,25 @@ export const DevnetTokenOps: FC = () => {
       setTransferAmount("");
     } catch (error) {
       console.error("Error transferring tokens:", error);
-      setStatus(
-        `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      let errorMessage = "Unknown error";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+
+        // Provide specific error messages
+        if (errorMessage.includes("TokenOwnerOffCurveError")) {
+          errorMessage =
+            "Invalid address: Please use a wallet address, not a token account address";
+        } else if (errorMessage.includes("insufficient")) {
+          errorMessage = "Insufficient token balance for this transfer";
+        } else if (errorMessage.includes("Invalid address")) {
+          errorMessage = "Please enter a valid Solana wallet address";
+        }
+      }
+
+      setStatus(`❌ Error: ${errorMessage}`);
     } finally {
-      setIsLoading(false);
+      setIsLoadingTransfer(false);
     }
   }, [
     connection,
@@ -235,6 +324,7 @@ export const DevnetTokenOps: FC = () => {
     getUserTokenAccount,
     tokenInfo,
     getTokenInfo,
+    validateRecipientAddress,
   ]);
 
   // Get devnet SOL (airdrop)
@@ -242,7 +332,7 @@ export const DevnetTokenOps: FC = () => {
     if (!publicKey) return;
 
     try {
-      setIsLoading(true);
+      setIsLoadingAirdrop(true);
       setStatus("Requesting SOL airdrop...");
 
       const signature = await connection.requestAirdrop(publicKey, 1000000000); // 1 SOL
@@ -259,7 +349,7 @@ export const DevnetTokenOps: FC = () => {
         }`
       );
     } finally {
-      setIsLoading(false);
+      setIsLoadingAirdrop(false);
     }
   }, [connection, publicKey]);
 
@@ -270,9 +360,20 @@ export const DevnetTokenOps: FC = () => {
     }
   }, [publicKey, selectedToken, getTokenInfo]);
 
+  // Helper function to check if address is valid
+  const isValidSolanaAddress = (address: string): boolean => {
+    try {
+      new PublicKey(address);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <AuthGate>
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
         <Card>
           <CardHeader>
             <CardTitle>
@@ -280,23 +381,41 @@ export const DevnetTokenOps: FC = () => {
                 🪙 Devnet Token Operations
               </Text>
             </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Interact with existing devnet tokens - check balances, create
+                accounts, and transfer tokens
+              </Text>
+            </CardDescription>
           </CardHeader>
         </Card>
 
         {/* Token Selection */}
         <Card>
-          <CardContent className="py-6">
-            <div className="space-y-4">
-              <Text variant="h6" weight="semibold">
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
                 Select Token
               </Text>
-
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Choose from available devnet tokens
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Token:</label>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium" color="default">
+                    Token:
+                  </Text>
+                </label>
                 <select
                   value={selectedToken}
                   onChange={(e) => setSelectedToken(e.target.value)}
-                  className="w-full p-2 border rounded text-sm"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 transition-colors"
                 >
                   {Object.entries(DEVNET_TOKENS).map(([symbol, address]) => (
                     <option key={address} value={address}>
@@ -306,44 +425,65 @@ export const DevnetTokenOps: FC = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
                   onClick={getTokenInfo}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                  disabled={isLoadingBalance}
+                  variant="outline"
+                  className="w-full"
                 >
-                  {isLoading ? "Loading..." : "Check Balance"}
-                </button>
+                  {isLoadingBalance ? "Loading..." : "Check Balance"}
+                </Button>
 
-                <button
+                <Button
                   onClick={createTokenAccount}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+                  disabled={isLoadingCreate}
+                  className="w-full"
                 >
-                  Create Token Account
-                </button>
+                  {isLoadingCreate ? "Creating..." : "Create Token Account"}
+                </Button>
               </div>
 
               {/* Token Info Display */}
               {tokenInfo && (
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <Text variant="small" weight="semibold">
-                    Token Info:
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Text
+                    variant="small"
+                    weight="semibold"
+                    color="primary"
+                    className="mb-3"
+                  >
+                    Token Information:
                   </Text>
-                  <div className="text-xs space-y-1 mt-1">
-                    <div>Decimals: {tokenInfo.decimals}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      Supply:{" "}
-                      {(
-                        Number(tokenInfo.supply) /
-                        Math.pow(10, tokenInfo.decimals)
-                      ).toLocaleString()}
+                      <Text variant="extraSmall" color="muted">
+                        Decimals:
+                      </Text>
+                      <Text variant="small" weight="semibold">
+                        {tokenInfo.decimals}
+                      </Text>
                     </div>
                     <div>
-                      Your Balance:{" "}
-                      {tokenBalance !== null
-                        ? `${tokenBalance.toFixed(6)}`
-                        : "Loading..."}
+                      <Text variant="extraSmall" color="muted">
+                        Total Supply:
+                      </Text>
+                      <Text variant="small" weight="semibold">
+                        {(
+                          Number(tokenInfo.supply) /
+                          Math.pow(10, tokenInfo.decimals)
+                        ).toLocaleString()}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text variant="extraSmall" color="muted">
+                        Your Balance:
+                      </Text>
+                      <Text variant="small" weight="semibold" color="primary">
+                        {tokenBalance !== null
+                          ? `${tokenBalance.toFixed(6)} tokens`
+                          : "---"}
+                      </Text>
                     </div>
                   </div>
                 </div>
@@ -352,62 +492,166 @@ export const DevnetTokenOps: FC = () => {
           </CardContent>
         </Card>
 
-        {/* Transfer Section */}
+        {/* Transfer Tokens */}
         <Card>
-          <CardContent className="py-6">
-            <div className="space-y-4">
-              <Text variant="h6" weight="semibold">
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
                 Transfer Tokens
               </Text>
-
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Send tokens to another wallet or token account
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Recipient Address:
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium" color="default">
+                    Recipient Address (Wallet or Token Account)
+                  </Text>
                 </label>
                 <input
                   type="text"
                   value={recipientAddress}
                   onChange={(e) => setRecipientAddress(e.target.value)}
-                  placeholder="Enter Solana address"
-                  className="w-full p-2 border rounded text-sm"
+                  placeholder="Enter Solana wallet address or token account address"
+                  className={`w-full p-3 border rounded-lg text-sm transition-colors ${
+                    recipientAddress && !isValidSolanaAddress(recipientAddress)
+                      ? "border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500"
+                      : recipientAddress &&
+                        isValidSolanaAddress(recipientAddress)
+                      ? "border-green-500 bg-green-50 dark:bg-green-900/20 focus:ring-green-500"
+                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+                  } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
                 />
+                {recipientAddress &&
+                  !isValidSolanaAddress(recipientAddress) && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <span className="text-red-500">❌</span>
+                      <Text variant="extraSmall" color="error">
+                        Invalid Solana address format
+                      </Text>
+                    </div>
+                  )}
+                {recipientAddress && isValidSolanaAddress(recipientAddress) && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <span className="text-green-500">✅</span>
+                    <Text variant="extraSmall" color="success">
+                      Valid Solana address
+                    </Text>
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Amount:
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium" color="default">
+                    Amount
+                  </Text>
                 </label>
                 <input
                   type="number"
                   value={transferAmount}
                   onChange={(e) => setTransferAmount(e.target.value)}
-                  placeholder="0.0"
+                  placeholder="0.001"
                   step="0.000001"
-                  className="w-full p-2 border rounded"
+                  min="0"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 transition-colors"
                 />
+                <Text variant="extraSmall" color="muted" className="mt-1">
+                  Available balance:{" "}
+                  {tokenBalance !== null
+                    ? `${tokenBalance.toFixed(6)} tokens`
+                    : "---"}
+                </Text>
               </div>
 
-              <button
+              <Button
                 onClick={transferTokens}
                 disabled={
-                  isLoading ||
+                  isLoadingTransfer ||
                   !recipientAddress ||
                   !transferAmount ||
-                  tokenBalance === 0
+                  !isValidSolanaAddress(recipientAddress) ||
+                  !tokenBalance ||
+                  parseFloat(transferAmount) > tokenBalance
                 }
-                className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                className="w-full"
+                size="lg"
               >
-                Transfer Tokens
-              </button>
+                {isLoadingTransfer ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  "Transfer Tokens"
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
+
         {/* Status Display */}
         {status && (
           <Card>
-            <CardContent className="py-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <Text variant="small">{status}</Text>
+            <CardContent>
+              <div
+                className={`p-4 rounded-lg border ${
+                  status.includes("❌")
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                    : status.includes("✅")
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                    : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                }`}
+              >
+                <div className="flex items-start space-x-3">
+                  <div
+                    className={`w-2 h-2 rounded-full mt-2 ${
+                      status.includes("❌")
+                        ? "bg-red-500"
+                        : status.includes("✅")
+                        ? "bg-green-500"
+                        : "bg-blue-500"
+                    }`}
+                  ></div>
+                  <div className="flex-1">
+                    <Text
+                      variant="small"
+                      color={
+                        status.includes("❌")
+                          ? "error"
+                          : status.includes("✅")
+                          ? "success"
+                          : "primary"
+                      }
+                      weight="medium"
+                    >
+                      Status
+                    </Text>
+                    <Text
+                      variant="extraSmall"
+                      color="muted"
+                      className="mt-1 break-all"
+                    >
+                      {status}
+                    </Text>
+                  </div>
+                  {status.includes("✅") && (
+                    <Button
+                      onClick={() => setStatus("")}
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -415,27 +659,43 @@ export const DevnetTokenOps: FC = () => {
 
         {/* Devnet Utilities */}
         <Card>
-          <CardContent className="py-6">
-            <div className="space-y-4">
-              <Text variant="h6" weight="semibold">
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
                 Devnet Utilities
               </Text>
-
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                <Text variant="small" weight="semibold" className="mb-2">
-                  🚰 Get Free SOL:
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Get devnet SOL for transaction fees
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="text-yellow-600 dark:text-yellow-400">
+                    ⚠️
+                  </span>
+                  <Text variant="small" weight="semibold" color="warning">
+                    Devnet Only
+                  </Text>
+                </div>
+                <Text variant="extraSmall" color="muted">
+                  This airdrop only works on devnet. You need SOL to pay for
+                  transaction fees.
                 </Text>
-                <Text variant="extraSmall" color="muted" className="mb-3">
-                  Request free SOL for transaction fees on devnet
-                </Text>
-                <button
-                  onClick={requestAirdrop}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50"
-                >
-                  Request 1 SOL Airdrop
-                </button>
               </div>
+
+              <Button
+                onClick={requestAirdrop}
+                disabled={isLoadingAirdrop}
+                variant="outline"
+                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+              >
+                {isLoadingAirdrop ? "Requesting..." : "Get 1 SOL (Airdrop)"}
+              </Button>
             </div>
           </CardContent>
         </Card>
