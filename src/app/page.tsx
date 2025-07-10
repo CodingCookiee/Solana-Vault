@@ -1,7 +1,7 @@
-import { WalletConnection } from "@/components/ui/client/WalletConnection";
-import { TransactionPanel } from "@/components/ui/client/TransactionPanel";
-import { AuthModal } from "@/components/ui/client/AuthModal";
-import { AuthFlowInfo } from "@/components/ui/client/AuthFlowInfo";
+import { WalletConnection } from "@/components/ui/client/WalletConnect/WalletConnection";
+import { TransactionPanel } from "@/components/ui/client/TransactionPanel/TransactionPanel";
+import { AuthModal } from "@/components/ui/client/Auth/AuthModal";
+import { AuthFlowInfo } from "@/components/ui/client/Auth/AuthFlowInfo";
 import { Text } from "@/components/ui/common";
 
 export default function Home() {
