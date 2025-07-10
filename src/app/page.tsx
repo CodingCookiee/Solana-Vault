@@ -183,7 +183,7 @@ export default function Home() {
       </div>
       
       {/* Auth Modal */}
-      {/* <AuthModal /> */}
+      <AuthModal />
     </div>
   );
 }
