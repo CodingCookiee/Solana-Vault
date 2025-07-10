@@ -40,7 +40,7 @@ export const AuthModal: React.FC = () => {
   if (!showAuthModal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-100 p-4">
       <Card className="max-w-md w-full mx-auto shadow-2xl border-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">

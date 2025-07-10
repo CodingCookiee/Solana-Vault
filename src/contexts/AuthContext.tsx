@@ -113,9 +113,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sign the message - if this succeeds, we trust the wallet's signature
       const signatureBytes = await signMessage(messageBytes);
 
-      // Since the wallet successfully signed the message, we can trust it's valid
-      // The wallet itself handles the cryptographic verification internally
-
       // Store signature and mark as authenticated
       const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
       setSignature(signatureBase64);

@@ -11,7 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/common";
-import { Text } from "@/components/ui/common";
+import { Text, Button } from "@/components/ui/common";
 
 export const WalletConnection: FC = () => {
   const { publicKey, connected, connecting, disconnect } = useWallet();
@@ -83,12 +83,9 @@ export const WalletConnection: FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm hover:shadow-md text-sm font-medium"
-              >
+              <Button variant="destructive" onClick={logout} className="">
                 Disconnect & Logout
-              </button>
+              </Button>
             </div>
           )}
 
