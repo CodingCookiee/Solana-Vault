@@ -1,4 +1,4 @@
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, PublicKey, LAMPORTS_PER_SOL, Transaction, Keypair, SystemProgram } from "@solana/web3.js";
 import {
   createMint,
   createAssociatedTokenAccount,
@@ -10,6 +10,16 @@ import {
   revoke,
   getAccount,
   getMint,
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  createInitializeMintInstruction,
+  createAssociatedTokenAccountInstruction,
+  createMintToInstruction,
+  createTransferInstruction,
+  createBurnInstruction,
+  createApproveInstruction,
+  createRevokeInstruction,
+  getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 
@@ -76,20 +86,45 @@ export const createToken = async (
   try {
     ensureWalletConnected(wallet.publicKey);
 
-    if (!wallet.signTransaction) {
-      throw new Error("Wallet does not support signing transactions");
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
     }
 
-    const mint = await createMint(
-      connection,
-      wallet, // Payer
-      wallet.publicKey, // Mint authority
-      wallet.publicKey, // Freeze authority (optional)
-      decimals // Decimals
+    // Generate a new keypair for the mint
+    const mintKeypair = Keypair.generate();
+    
+    // Calculate minimum lamports needed for mint account
+    const mintLamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+    
+    // Create transaction
+    const transaction = new Transaction().add(
+      // Create mint account
+      SystemProgram.createAccount({
+        fromPubkey: wallet.publicKey,
+        newAccountPubkey: mintKeypair.publicKey,
+        space: MINT_SIZE,
+        lamports: mintLamports,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      // Initialize mint
+      createInitializeMintInstruction(
+        mintKeypair.publicKey, // Mint account
+        decimals, // Decimals
+        wallet.publicKey, // Mint authority
+        wallet.publicKey  // Freeze authority (optional)
+      )
     );
 
+    // Send transaction with the mint keypair as signer
+    const signature = await wallet.sendTransaction(transaction, connection, {
+      signers: [mintKeypair]
+    });
+    
+    // Confirm transaction
+    await connection.confirmTransaction(signature, 'confirmed');
+
     return {
-      signature: safeToBase58(mint),
+      signature: mintKeypair.publicKey.toBase58(), // Return mint address, not transaction signature
       success: true,
     };
   } catch (error) {
@@ -115,17 +150,37 @@ export const createTokenAccount = async (
       throw new Error("Invalid mint address");
     }
 
-    const mint = new PublicKey(mintAddress);
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
 
-    const tokenAccount = await createAssociatedTokenAccount(
-      connection,
-      wallet, // Payer
-      mint, // Mint
-      wallet.publicKey // Owner
+    const mint = new PublicKey(mintAddress);
+    const associatedTokenAddress = getAssociatedTokenAddressSync(mint, wallet.publicKey);
+
+    // Check if account already exists
+    const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
+    if (accountInfo) {
+      return {
+        signature: associatedTokenAddress.toBase58(),
+        success: true,
+      };
+    }
+
+    // Create transaction
+    const transaction = new Transaction().add(
+      createAssociatedTokenAccountInstruction(
+        wallet.publicKey, // Payer
+        associatedTokenAddress, // Associated token account
+        wallet.publicKey, // Owner
+        mint // Mint
+      )
     );
 
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
+
     return {
-      signature: safeToBase58(tokenAccount),
+      signature: associatedTokenAddress.toBase58(),
       success: true,
     };
   } catch (error) {
@@ -191,14 +246,22 @@ export const mintTokens = async (
       destination = await getAssociatedTokenAddress(mint, wallet.publicKey);
     }
 
-    const signature = await mintTo(
-      connection,
-      wallet, // Payer
-      mint, // Mint
-      destination, // Destination
-      wallet.publicKey, // Authority
-      amount // Amount (in smallest unit)
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
+
+    // Create transaction with mint instruction
+    const transaction = new Transaction().add(
+      createMintToInstruction(
+        mint, // Mint
+        destination, // Destination
+        wallet.publicKey, // Authority
+        amount // Amount (in smallest unit)
+      )
     );
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
 
     return {
       signature,
@@ -249,14 +312,22 @@ export const transferTokens = async (
     // Get destination token account
     const destinationAccount = await getAssociatedTokenAddress(mint, recipient);
 
-    const signature = await transfer(
-      connection,
-      wallet, // Payer
-      sourceAccount, // Source
-      destinationAccount, // Destination
-      wallet.publicKey, // Owner
-      amount // Amount
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
+
+    // Create transaction with transfer instruction
+    const transaction = new Transaction().add(
+      createTransferInstruction(
+        sourceAccount, // Source
+        destinationAccount, // Destination
+        wallet.publicKey, // Owner
+        amount // Amount
+      )
     );
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
 
     return {
       signature,
@@ -298,14 +369,22 @@ export const burnTokens = async (
       wallet.publicKey
     );
 
-    const signature = await burn(
-      connection,
-      wallet, // Payer
-      tokenAccount, // Account
-      mint, // Mint
-      wallet.publicKey, // Owner
-      amount // Amount
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
+
+    // Create transaction with burn instruction
+    const transaction = new Transaction().add(
+      createBurnInstruction(
+        tokenAccount, // Account
+        mint, // Mint
+        wallet.publicKey, // Owner
+        amount // Amount
+      )
     );
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
 
     return {
       signature,
@@ -353,14 +432,22 @@ export const approveTokens = async (
       wallet.publicKey
     );
 
-    const signature = await approve(
-      connection,
-      wallet, // Payer
-      tokenAccount, // Account
-      delegate, // Delegate
-      wallet.publicKey, // Owner
-      amount // Amount
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
+
+    // Create transaction with approve instruction
+    const transaction = new Transaction().add(
+      createApproveInstruction(
+        tokenAccount, // Account
+        delegate, // Delegate
+        wallet.publicKey, // Owner
+        amount // Amount
+      )
     );
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
 
     return {
       signature,
@@ -397,12 +484,20 @@ export const revokeApproval = async (
       wallet.publicKey
     );
 
-    const signature = await revoke(
-      connection,
-      wallet, // Payer
-      tokenAccount, // Account
-      wallet.publicKey // Owner
+    if (!wallet.sendTransaction) {
+      throw new Error("Wallet does not support sending transactions");
+    }
+
+    // Create transaction with revoke instruction
+    const transaction = new Transaction().add(
+      createRevokeInstruction(
+        tokenAccount, // Account
+        wallet.publicKey // Owner
+      )
     );
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
 
     return {
       signature,
