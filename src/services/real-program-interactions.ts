@@ -211,6 +211,35 @@ export const createDataAccount = async (
 };
 
 /**
+ * Read account data from any Solana account
+ */
+export const readAccountData = async (
+  connection: Connection,
+  accountAddress: PublicKey
+): Promise<any> => {
+  try {
+    const accountInfo = await connection.getAccountInfo(accountAddress);
+
+    if (!accountInfo) {
+      throw new Error("Account not found");
+    }
+
+    return {
+      owner: accountInfo.owner.toBase58(),
+      lamports: accountInfo.lamports,
+      dataLength: accountInfo.data.length,
+      executable: accountInfo.executable,
+      rentEpoch: accountInfo.rentEpoch,
+      data: accountInfo.data.toString("hex"), // Raw data as hex string
+      explorerUrl: `https://explorer.solana.com/address/${accountAddress.toBase58()}?cluster=devnet`,
+    };
+  } catch (error) {
+    console.error("Error reading account data:", error);
+    throw error;
+  }
+};
+
+/**
  * Read program accounts owned by a specific program
  */
 export const getProgramAccountsData = async (
@@ -353,6 +382,7 @@ export const useRealProgramInteractions = () => {
     checkAccountExists,
     getAccountTransactions,
     transferSol,
+    readAccountData, // Add this to the hook
     REAL_PROGRAMS,
   };
 };

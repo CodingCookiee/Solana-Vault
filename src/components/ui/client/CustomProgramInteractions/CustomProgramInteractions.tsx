@@ -23,26 +23,18 @@ export const CustomProgramInteractions: React.FC = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
 
-
   const {
     sendMemoMessage,
     createDataAccount,
     checkAccountExists,
     getAccountTransactions,
     transferSol,
+    readAccountData, // Add this import
   } = useRealProgramInteractions();
 
   // State management
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>("");
-
-  // Counter state
-  const [counterAddress, setCounterAddress] = useState<string>("");
-  const [counterData, setCounterData] = useState<CounterAccount | null>(null);
-
-  // Hello World state
-  const [helloMessage, setHelloMessage] = useState<string>("Hello, Solana!");
-  const [messageAddress, setMessageAddress] = useState<string>("");
 
   // Memo state
   const [memoText, setMemoText] = useState<string>(
@@ -58,24 +50,6 @@ export const CustomProgramInteractions: React.FC = () => {
   const [solAmount, setSolAmount] = useState<string>("0.01");
 
   // Helper functions
-  const handleResult = (
-    result: ProgramInteractionResult,
-    successMessage: string
-  ) => {
-    if (result.success) {
-      setStatus(`✅ ${successMessage}: ${result.signature}`);
-      // Handle specific data
-      if (result.data?.counterAddress) {
-        setCounterAddress(result.data.counterAddress);
-      }
-      if (result.data?.messageAddress) {
-        setMessageAddress(result.data.messageAddress);
-      }
-    } else {
-      setStatus(`❌ Error: ${result.error}`);
-    }
-  };
-
   const executeWithLoading = async (
     operation: () => Promise<void>,
     loadingMessage: string
@@ -99,63 +73,6 @@ export const CustomProgramInteractions: React.FC = () => {
     }
   };
 
-  // Load counter data when address changes
-  useEffect(() => {
-    if (counterAddress && wallet.publicKey) {
-      loadCounterData();
-    }
-  }, [counterAddress, wallet.publicKey]);
-
-  const loadCounterData = async () => {
-    if (!counterAddress || !wallet.publicKey) return;
-
-    try {
-      const counterPubkey = new PublicKey(counterAddress);
-      const data = await getCounterData(
-        connection,
-        wallet as any,
-        EXAMPLE_PROGRAMS.COUNTER,
-        counterPubkey
-      );
-      setCounterData(data);
-    } catch (error) {
-      console.error("Error loading counter data:", error);
-    }
-  };
-
-  // Program interactions
-  const handleInitializeCounter = async () => {
-    await executeWithLoading(async () => {
-      const result = await initializeCounter(
-        connection,
-        wallet as any,
-        EXAMPLE_PROGRAMS.COUNTER
-      );
-      handleResult(result, "Counter initialized");
-    }, "Initializing counter");
-  };
-
-  const handleIncrementCounter = async () => {
-    if (!counterAddress) {
-      setStatus("❌ Please initialize a counter first");
-      return;
-    }
-
-    await executeWithLoading(async () => {
-      const counterPubkey = new PublicKey(counterAddress);
-      const result = await incrementCounter(
-        connection,
-        wallet as any,
-        EXAMPLE_PROGRAMS.COUNTER,
-        counterPubkey
-      );
-      handleResult(result, "Counter incremented");
-
-      // Refresh counter data
-      setTimeout(loadCounterData, 2000);
-    }, "Incrementing counter");
-  };
-
   const handleSendMemo = async () => {
     if (!memoText.trim()) {
       setStatus("❌ Please enter a memo message");
@@ -175,23 +92,6 @@ export const CustomProgramInteractions: React.FC = () => {
         setStatus(`❌ Error: ${result.error}`);
       }
     }, "Sending memo");
-  };
-
-  const handleCreateHelloMessage = async () => {
-    if (!helloMessage.trim()) {
-      setStatus("❌ Please enter a message");
-      return;
-    }
-
-    await executeWithLoading(async () => {
-      const result = await createHelloWorldMessage(
-        connection,
-        wallet as any,
-        EXAMPLE_PROGRAMS.HELLO_WORLD,
-        helloMessage
-      );
-      handleResult(result, "Hello World message created");
-    }, "Creating message");
   };
 
   const handleReadAccount = async () => {
@@ -292,7 +192,6 @@ export const CustomProgramInteractions: React.FC = () => {
           </CardHeader>
         </Card>
 
-        
         {/* Memo Program - Real Program Interaction */}
         <Card className="border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800">
           <CardHeader>
@@ -400,7 +299,6 @@ export const CustomProgramInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-
         {/* Account Reader */}
         <Card>
           <CardHeader>
@@ -472,56 +370,28 @@ export const CustomProgramInteractions: React.FC = () => {
                   <Text variant="small" color="default">
                     Executable: {accountData.executable ? "Yes" : "No"}
                   </Text>
+                  <Text variant="small" color="default">
+                    Rent Epoch: {accountData.rentEpoch}
+                  </Text>
+                  {accountData.explorerUrl && (
+                    <div className="mt-2">
+                      <a
+                        href={accountData.explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline text-sm"
+                      >
+                        View on Solana Explorer
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Program IDs Reference */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                📋 Program IDs Reference
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Common Solana program addresses
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Text variant="small" weight="medium">
-                    System Program:
-                  </Text>
-                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                    {REAL_PROGRAMS.SYSTEM.toBase58()}
-                  </div>
-                </div>
-                <div>
-                  <Text variant="small" weight="medium">
-                    Memo Program (Working):
-                  </Text>
-                  <div className="bg-green-100 dark:bg-green-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                    {REAL_PROGRAMS.MEMO.toBase58()}
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <Text variant="extraSmall" color="muted">
-                  💡 Tip: The Memo Program is fully functional - try sending a
-                  message! You can also use these addresses to read account
-                  data.
-                </Text>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      
 
         {/* Status Display */}
         {status && (
