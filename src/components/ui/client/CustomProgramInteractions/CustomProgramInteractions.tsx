@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
@@ -13,27 +13,23 @@ import {
   Button,
   Text,
 } from "@/components/ui/common";
-import {
-  useRealProgramInteractions,
-  RealProgramResult,
-  REAL_PROGRAMS,
-} from "@/services/real-program-interactions";
+
+// Import the new structured services
+import { useMemoService } from "@/services/memo";
+import { useSystemService } from "@/services/system";
+import { useAccountService } from "@/services/account";
+import { SOLANA_PROGRAMS } from "@/services/constants";
 
 export const CustomProgramInteractions: React.FC = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
 
-  const {
-    sendMemoMessage,
-    createDataAccount,
-    checkAccountExists,
-    getAccountTransactions,
-    transferSol,
-    readAccountData, // Add this import
-  } = useRealProgramInteractions();
+  // Use the new service hooks
+  const memoService = useMemoService();
+  const systemService = useSystemService();
+  const accountService = useAccountService();
 
   // State management
-  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>("");
 
   // Memo state
@@ -49,6 +45,10 @@ export const CustomProgramInteractions: React.FC = () => {
   const [solRecipient, setSolRecipient] = useState<string>("");
   const [solAmount, setSolAmount] = useState<string>("0.01");
 
+  // Helper function to check if any service is loading
+  const isLoading =
+    memoService.loading || systemService.loading || accountService.loading;
+
   // Helper functions
   const executeWithLoading = async (
     operation: () => Promise<void>,
@@ -60,7 +60,6 @@ export const CustomProgramInteractions: React.FC = () => {
     }
 
     try {
-      setLoading(true);
       setStatus(`⏳ ${loadingMessage}...`);
       await operation();
     } catch (error) {
@@ -68,19 +67,19 @@ export const CustomProgramInteractions: React.FC = () => {
         error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
       console.error("Operation failed:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSendMemo = async () => {
-    if (!memoText.trim()) {
-      setStatus("❌ Please enter a memo message");
+    // Validate memo message using the service
+    const validation = memoService.validateMessage(memoText);
+    if (!validation.valid) {
+      setStatus(`❌ ${validation.error}`);
       return;
     }
 
     await executeWithLoading(async () => {
-      const result = await sendMemoMessage(connection, wallet as any, memoText);
+      const result = await memoService.sendMemo(memoText);
       if (result.success) {
         setStatus(`✅ Memo sent successfully!`);
         if (result.data?.explorerUrl) {
@@ -95,19 +94,19 @@ export const CustomProgramInteractions: React.FC = () => {
   };
 
   const handleReadAccount = async () => {
-    if (!accountToRead.trim()) {
-      setStatus("❌ Please enter an account address");
+    // Validate address using the service
+    if (!accountService.validateAddress(accountToRead)) {
+      setStatus("❌ Invalid Solana address format");
       return;
     }
 
     await executeWithLoading(async () => {
-      try {
-        const accountPubkey = new PublicKey(accountToRead);
-        const data = await readAccountData(connection, accountPubkey);
+      const data = await accountService.readAccount(accountToRead);
+      if (data) {
         setAccountData(data);
         setStatus("✅ Account data loaded successfully");
-      } catch (error) {
-        throw new Error(`Invalid account address: ${error}`);
+      } else {
+        setStatus("❌ Failed to read account data");
       }
     }, "Reading account data");
   };
@@ -118,43 +117,37 @@ export const CustomProgramInteractions: React.FC = () => {
       return;
     }
 
-    await executeWithLoading(async () => {
-      try {
-        const recipientPubkey = new PublicKey(solRecipient);
-        const amount = parseFloat(solAmount);
-        if (isNaN(amount) || amount <= 0) {
-          throw new Error("Amount must be a positive number");
-        }
+    // Validate address
+    if (!accountService.validateAddress(solRecipient)) {
+      setStatus("❌ Invalid recipient address");
+      return;
+    }
 
-        const result = await transferSol(
-          connection,
-          wallet as any,
-          recipientPubkey,
-          amount
-        );
-        if (result.success) {
-          setStatus(`✅ Transferred ${amount} SOL successfully!`);
-          if (result.data?.explorerUrl) {
-            setStatus(
-              `✅ Transfer successful! View on Explorer: ${result.data.explorerUrl}`
-            );
-          }
-        } else {
-          setStatus(`❌ Error: ${result.error}`);
+    // Validate amount
+    const amount = parseFloat(solAmount);
+    const amountValidation = systemService.validateAmount(amount);
+    if (!amountValidation.valid) {
+      setStatus(`❌ ${amountValidation.error}`);
+      return;
+    }
+
+    await executeWithLoading(async () => {
+      const result = await systemService.transfer(solRecipient, amount);
+      if (result.success) {
+        setStatus(`✅ Transferred ${amount} SOL successfully!`);
+        if (result.data?.explorerUrl) {
+          setStatus(
+            `✅ Transfer successful! View on Explorer: ${result.data.explorerUrl}`
+          );
         }
-      } catch (error) {
-        throw new Error(`Transfer failed: ${error}`);
+      } else {
+        setStatus(`❌ Error: ${result.error}`);
       }
     }, "Transferring SOL");
   };
 
   const isValidSolanaAddress = (address: string): boolean => {
-    try {
-      new PublicKey(address);
-      return true;
-    } catch {
-      return false;
-    }
+    return accountService.validateAddress(address);
   };
 
   // Show loading state if wallet is not ready
@@ -221,13 +214,20 @@ export const CustomProgramInteractions: React.FC = () => {
                 className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 resize-none"
                 rows={3}
               />
+              {memoText && !memoService.validateMessage(memoText).valid && (
+                <Text variant="extraSmall" color="error" className="mt-1">
+                  {memoService.validateMessage(memoText).error}
+                </Text>
+              )}
             </div>
             <Button
               onClick={handleSendMemo}
-              disabled={loading || !memoText.trim()}
+              disabled={
+                isLoading || !memoService.validateMessage(memoText).valid
+              }
               className="w-full bg-green-600 hover:bg-green-700"
             >
-              Send Memo to Blockchain
+              {memoService.loading ? "Sending..." : "Send Memo to Blockchain"}
             </Button>
           </CardContent>
         </Card>
@@ -267,6 +267,11 @@ export const CustomProgramInteractions: React.FC = () => {
                       : "border-gray-300 dark:border-gray-600"
                   }`}
                 />
+                {solRecipient && !isValidSolanaAddress(solRecipient) && (
+                  <Text variant="extraSmall" color="error" className="mt-1">
+                    Invalid Solana address format
+                  </Text>
+                )}
               </div>
               <div>
                 <label className="block mb-2">
@@ -282,19 +287,31 @@ export const CustomProgramInteractions: React.FC = () => {
                   step="0.01"
                   className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
                 />
+                {solAmount &&
+                  !systemService.validateAmount(parseFloat(solAmount))
+                    .valid && (
+                    <Text variant="extraSmall" color="error" className="mt-1">
+                      {
+                        systemService.validateAmount(parseFloat(solAmount))
+                          .error
+                      }
+                    </Text>
+                  )}
               </div>
             </div>
             <Button
               onClick={handleTransferSol}
               disabled={
-                loading ||
+                isLoading ||
                 !solRecipient ||
                 !solAmount ||
-                !isValidSolanaAddress(solRecipient)
+                !isValidSolanaAddress(solRecipient) ||
+                !systemService.validateAmount(parseFloat(solAmount || "0"))
+                  .valid
               }
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              Transfer SOL
+              {systemService.loading ? "Transferring..." : "Transfer SOL"}
             </Button>
           </CardContent>
         </Card>
@@ -342,14 +359,14 @@ export const CustomProgramInteractions: React.FC = () => {
             <Button
               onClick={handleReadAccount}
               disabled={
-                loading ||
+                isLoading ||
                 !accountToRead ||
                 !isValidSolanaAddress(accountToRead)
               }
               variant="outline"
               className="w-full"
             >
-              Read Account Data
+              {accountService.loading ? "Reading..." : "Read Account Data"}
             </Button>
 
             {accountData && (
@@ -391,7 +408,107 @@ export const CustomProgramInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-      
+        {/* Program IDs Reference */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                📋 Program IDs Reference
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Common Solana program addresses
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Text variant="small" weight="medium">
+                    System Program:
+                  </Text>
+                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
+                    {SOLANA_PROGRAMS.SYSTEM.toBase58()}
+                  </div>
+                </div>
+                <div>
+                  <Text variant="small" weight="medium">
+                    Memo Program (Working):
+                  </Text>
+                  <div className="bg-green-100 dark:bg-green-800 p-2 rounded mt-1 font-mono text-xs break-all">
+                    {SOLANA_PROGRAMS.MEMO.toBase58()}
+                  </div>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <Text variant="extraSmall" color="muted">
+                  💡 Tip: The Memo Program is fully functional - try sending a
+                  message! You can also use these addresses to read account
+                  data.
+                </Text>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Service Status Display */}
+        {(memoService.error || systemService.error || accountService.error) && (
+          <Card>
+            <CardContent>
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <Text variant="small" weight="medium" color="error">
+                  Service Errors:
+                </Text>
+                <div className="mt-2 space-y-1">
+                  {memoService.error && (
+                    <div className="flex justify-between items-center">
+                      <Text variant="small" color="error">
+                        Memo: {memoService.error}
+                      </Text>
+                      <Button
+                        onClick={memoService.clearError}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                  {systemService.error && (
+                    <div className="flex justify-between items-center">
+                      <Text variant="small" color="error">
+                        System: {systemService.error}
+                      </Text>
+                      <Button
+                        onClick={systemService.clearError}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                  {accountService.error && (
+                    <div className="flex justify-between items-center">
+                      <Text variant="small" color="error">
+                        Account: {accountService.error}
+                      </Text>
+                      <Button
+                        onClick={accountService.clearError}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Display */}
         {status && (
@@ -427,7 +544,83 @@ export const CustomProgramInteractions: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Loading Indicator */}
+        {isLoading && (
+          <Card>
+            <CardContent>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center space-x-3">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <Text variant="small" weight="medium" color="primary">
+                    Processing transaction...
+                  </Text>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Wallet Balance Display */}
+        {wallet.publicKey && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Text variant="h5" color="default">
+                  💳 Wallet Information
+                </Text>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div>
+                  <Text variant="small" weight="medium">
+                    Connected Wallet:
+                  </Text>
+                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
+                    {wallet.publicKey.toBase58()}
+                  </div>
+                </div>
+                <WalletBalance />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AuthGate>
+  );
+};
+
+// Helper component to display wallet balance
+const WalletBalance: React.FC = () => {
+  const { useSystemService } = require("@/services/solana/system");
+  const systemService = useSystemService();
+  const [balance, setBalance] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const loadBalance = async () => {
+      const bal = await systemService.getBalance();
+      setBalance(bal);
+    };
+    loadBalance();
+  }, [systemService]);
+
+  if (balance === null) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+        <Text variant="small" color="muted">
+          Loading balance...
+        </Text>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Text variant="small" weight="medium">
+        Balance: {balance.toFixed(4)} SOL
+      </Text>
+    </div>
   );
 };

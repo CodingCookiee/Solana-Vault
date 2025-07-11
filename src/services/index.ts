@@ -11,18 +11,32 @@ export * from "./account";
 export {
   // Memo
   sendMemoMessage,
+  validateMemoMessage,
+  getMemoProgram,
   useMemoService,
-  
+} from "./memo";
+
+export {
   // System
   transferSol,
   createDataAccount,
+  getAccountBalance,
+  validateSolAmount,
   useSystemService,
-  
+} from "./system";
+
+export {
   // Account
   readAccountData,
   checkAccountExists,
+  getAccountTransactions,
+  isValidPublicKey,
   useAccountService,
-  
+} from "./account";
+
+export {
   // Constants
   SOLANA_PROGRAMS,
-} from "./memo";
+  SOLANA_EXPLORER_BASE_URL,
+  CLUSTER,
+} from "./constants";

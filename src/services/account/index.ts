@@ -1,11 +1,16 @@
-export * from "./system.service";
-export * from "./system.types";
-export * from "./system.hooks";
+// Export all account-related functions and types
+export * from "./account.service";
+export * from "./account.types";
+export * from "./account.hooks";
 
+// Re-export commonly used functions for convenience
 export {
-  transferSol,
-  createDataAccount,
-  getAccountBalance,
-  validateSolAmount,
-  useSystemService,
-} from "./system.service";
+  readAccountData,
+  checkAccountExists,
+  getAccountTransactions,
+  isValidPublicKey,
+  getProgramAccounts,
+  getMultipleAccountsData,
+  getAccountRentInfo,
+  useAccountService,
+} from "./account.service";

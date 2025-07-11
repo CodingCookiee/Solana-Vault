@@ -9,7 +9,7 @@ import {
   SOLANA_PROGRAMS,
   SOLANA_EXPLORER_BASE_URL,
   CLUSTER,
-} from "../constants";
+} from "@/solana/constants";
 import { MemoServiceResult } from "./memo.types";
 
 /**
@@ -154,7 +154,7 @@ export const parseMemoFromTransaction = (
 };
 
 /**
- * Get memo program info
+ * Get memo program info (renamed to avoid conflict)
  */
 export const getMemoProgram = (): {
   programId: PublicKey;
