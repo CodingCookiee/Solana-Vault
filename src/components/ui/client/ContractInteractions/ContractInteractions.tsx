@@ -191,7 +191,7 @@ export const ContractInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h5" color="default">
-                📝 Memo Program (Live on Devnet)
+                📝 Memo Program 
               </Text>
             </CardTitle>
             <CardDescription>
