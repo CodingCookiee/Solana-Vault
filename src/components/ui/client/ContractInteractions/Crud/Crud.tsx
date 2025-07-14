@@ -303,10 +303,11 @@ export const Crud: React.FC = () => {
                         setSelectedEntry(null);
                         setUpdateForm({ title: "", message: "" });
                       }}
+                      disabled={loading}
                       variant="secondary"
-                      className="px-4"
+                      className="flex-1"
                     >
-                      Cancel
+                      Clear
                     </Button>
                   )}
                 </div>
@@ -358,70 +359,72 @@ export const Crud: React.FC = () => {
         <div>
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>
-                  <Text variant="h4">Your Entries ({entries.length})</Text>
-                </CardTitle>
+              <CardTitle>
+                <Text variant="h4">Your Entries</Text>
+              </CardTitle>
+              <CardDescription>
+                <Text color="secondary">
+                  {entries.length} {entries.length === 1 ? "entry" : "entries"}{" "}
+                  found
+                </Text>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
                 <Button
                   onClick={refreshEntries}
                   disabled={loading}
                   variant="secondary"
-                  size="sm"
+                  className="w-full"
                 >
-                  Refresh
+                  Refresh Entries
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
+
               {entries.length === 0 ? (
                 <div className="text-center py-8">
                   <Text color="muted">
-                    No entries found. Create your first entry!
+                    No entries found. Create your first entry using the form on
+                    the left.
                   </Text>
                 </div>
               ) : (
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {entries.map((entry, index) => (
-                    <Card key={index} className="bg-gray-50 border-gray-200">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle>
-                            <Text variant="h6" className="truncate">
+                    <Card key={index} className="bg-gray-50">
+                      <CardContent className="py-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start">
+                            <Text variant="h6" weight="semibold">
                               {entry.title}
                             </Text>
-                          </CardTitle>
-                          <div className="flex gap-2 ml-2">
-                            <Button
-                              onClick={() => handleEditEntry(entry)}
-                              size="sm"
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              onClick={() => setDeleteTitle(entry.title)}
-                              size="sm"
-                              variant="destructive"
-                              className="text-xs"
-                            >
-                              Delete
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                onClick={() => handleEditEntry(entry)}
+                                disabled={loading}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => setDeleteTitle(entry.title)}
+                                disabled={loading}
+                                size="sm"
+                                variant="destructive"
+                                className="text-xs"
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Text
-                          variant="small"
-                          color="secondary"
-                          className="break-words"
-                        >
-                          {entry.message}
-                        </Text>
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <Text variant="extraSmall" color="muted">
-                            Owner: {entry.owner.toString().slice(0, 8)}...
-                            {entry.owner.toString().slice(-8)}
+                          <Text color="secondary" className="break-words">
+                            {entry.message}
+                          </Text>
+                          <Text variant="small" color="muted">
+                            Owner: {entry.owner.toBase58().slice(0, 8)}...
+                            {entry.owner.toBase58().slice(-8)}
                           </Text>
                         </div>
                       </CardContent>

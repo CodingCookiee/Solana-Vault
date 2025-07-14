@@ -64,7 +64,7 @@ export const createCrudEntry = async (
       };
     }
 
-    // Use the correct instruction name from IDL
+    // Use the correct instruction name from IDL (snake_case)
     const tx = await program.methods
       .createCrudEntry(params.title, params.message)
       .accounts({
@@ -236,25 +236,40 @@ export const getCrudEntry = async (
   title: string
 ): Promise<CrudEntryState | null> => {
   try {
+    // Create a minimal provider for read operations
+    const provider = new AnchorProvider(connection, {} as AnchorWallet, {
+      commitment: "confirmed",
+    });
+    const program = new Program(crudIdl, PROGRAM_ID, provider);
+
     // Derive PDA for the CRUD entry
     const [crudEntryPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from(title), owner.toBuffer()],
       PROGRAM_ID
     );
 
-    // Use connection directly to get account info
-    const accountInfo = await connection.getAccountInfo(crudEntryPDA);
-    if (accountInfo === null) {
-      return null;
+    try {
+      // Try to fetch using program.account
+      const account = await program.account.crudEntryState.fetch(crudEntryPDA);
+      return {
+        owner: account.owner,
+        title: account.title,
+        message: account.message,
+      };
+    } catch (fetchError) {
+      // Fallback to connection.getAccountInfo
+      const accountInfo = await connection.getAccountInfo(crudEntryPDA);
+      if (accountInfo === null) {
+        return null;
+      }
+      
+      // Return basic info if we can't parse
+      return {
+        owner: owner,
+        title: title,
+        message: "Account exists but data parsing failed",
+      };
     }
-
-    // For now, we'll return a basic structure since we can't easily parse the account data
-    // In a production app, you'd want to implement proper account data deserialization
-    return {
-      owner: owner,
-      title: title,
-      message: "Account exists but message parsing not implemented", // Placeholder
-    };
   } catch (error) {
     console.error("Error getting CRUD entry:", error);
     return null;
@@ -269,12 +284,32 @@ export const getUserCrudEntries = async (
   owner: PublicKey
 ): Promise<CrudEntryState[]> => {
   try {
-    // For now, return empty array since we can't easily query all accounts
-    // In a production app, you'd want to implement proper account querying
-    console.warn(
-      "getUserCrudEntries not fully implemented - returning empty array"
-    );
-    return [];
+    // Create a minimal provider for read operations
+    const provider = new AnchorProvider(connection, {} as AnchorWallet, {
+      commitment: "confirmed",
+    });
+    const program = new Program(crudIdl, PROGRAM_ID, provider);
+
+    try {
+      // Try to fetch all accounts for this owner
+      const accounts = await program.account.crudEntryState.all([
+        {
+          memcmp: {
+            offset: 8, // Skip discriminator
+            bytes: owner.toBase58(),
+          },
+        },
+      ]);
+
+      return accounts.map((account) => ({
+        owner: account.account.owner,
+        title: account.account.title,
+        message: account.account.message,
+      }));
+    } catch (fetchError) {
+      console.warn("Could not fetch accounts using program.account.all:", fetchError);
+      return [];
+    }
   } catch (error) {
     console.error("Error getting user CRUD entries:", error);
     return [];

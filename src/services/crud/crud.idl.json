@@ -2,7 +2,8 @@
   "accounts": [
     {
       "discriminator": [219, 112, 2, 117, 158, 76, 29, 55],
-      "name": "CrudEntryState"
+      "name": "CrudEntryState",
+      "size": 1000
     }
   ],
   "address": "3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC",
