@@ -149,23 +149,18 @@ export const TransactionPanel: FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <AuthGate>
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h3" color="primary">
-                Wallet Operations
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Manage your SOL balance and send transactions
-              </Text>
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
         {/* Balance Section */}
         <Card>
+          <div className="flex items-center flex-col p-8 w-full h-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <Text variant="h3" color="primary">
+              Wallet Operations
+            </Text>
+
+            <Text variant="small" color="muted">
+              Manage your SOL balance and send transactions
+            </Text>
+          </div>
+
           <CardHeader>
             <CardTitle>
               <Text variant="h5" color="default">
@@ -201,112 +196,113 @@ export const TransactionPanel: FC = () => {
               </Button>
             </div>
           </CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Text variant="h5" color="default">
+                  Send SOL
+                </Text>
+              </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Transfer SOL to another Solana address
+                </Text>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block">
+                    <Text variant="small" weight="medium" color="default">
+                      Recipient Address
+                    </Text>
+                  </label>
+                  <input
+                    type="text"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder="Enter Solana address (44 characters)"
+                    className={`w-full p-3 border rounded-lg text-sm transition-colors ${
+                      recipient && !isValidSolanaAddress(recipient)
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500"
+                        : recipient && isValidSolanaAddress(recipient)
+                        ? "border-green-500 bg-green-50 dark:bg-green-900/20 focus:ring-green-500"
+                        : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+                    } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
+                  />
+                  {recipient && !isValidSolanaAddress(recipient) && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-red-500">❌</span>
+                      <Text variant="extraSmall" color="error">
+                        Invalid Solana address format
+                      </Text>
+                    </div>
+                  )}
+                  {recipient && isValidSolanaAddress(recipient) && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-500">✅</span>
+                      <Text variant="extraSmall" color="success">
+                        Valid Solana address
+                      </Text>
+                    </div>
+                  )}
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                    <Text variant="extraSmall" color="muted">
+                      💡 Need a test address? Use:{" "}
+                      <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">
+                        11111111111111111111111111111112
+                      </code>
+                    </Text>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block">
+                    <Text variant="small" weight="medium" color="default">
+                      Amount (SOL)
+                    </Text>
+                  </label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.001"
+                    step="0.000000001"
+                    min="0.000000001"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 transition-colors"
+                  />
+                  <Text variant="extraSmall" color="muted">
+                    Minimum: 0.000000001 SOL (1 lamport) • Recommended: 0.001
+                    SOL
+                  </Text>
+                </div>
+
+                <Button
+                  onClick={sendSOL}
+                  disabled={
+                    isLoading ||
+                    !recipient ||
+                    !amount ||
+                    !isValidSolanaAddress(recipient)
+                  }
+                  className="w-full"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Sending...</span>
+                    </div>
+                  ) : (
+                    "Send SOL"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </Card>
 
         {/* Send SOL Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                Send SOL
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Transfer SOL to another Solana address
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block">
-                  <Text variant="small" weight="medium" color="default">
-                    Recipient Address
-                  </Text>
-                </label>
-                <input
-                  type="text"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder="Enter Solana address (44 characters)"
-                  className={`w-full p-3 border rounded-lg text-sm transition-colors ${
-                    recipient && !isValidSolanaAddress(recipient)
-                      ? "border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500"
-                      : recipient && isValidSolanaAddress(recipient)
-                      ? "border-green-500 bg-green-50 dark:bg-green-900/20 focus:ring-green-500"
-                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
-                  } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
-                />
-                {recipient && !isValidSolanaAddress(recipient) && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-red-500">❌</span>
-                    <Text variant="extraSmall" color="error">
-                      Invalid Solana address format
-                    </Text>
-                  </div>
-                )}
-                {recipient && isValidSolanaAddress(recipient) && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-green-500">✅</span>
-                    <Text variant="extraSmall" color="success">
-                      Valid Solana address
-                    </Text>
-                  </div>
-                )}
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                  <Text variant="extraSmall" color="muted">
-                    💡 Need a test address? Use:{" "}
-                    <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">
-                      11111111111111111111111111111112
-                    </code>
-                  </Text>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block">
-                  <Text variant="small" weight="medium" color="default">
-                    Amount (SOL)
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.001"
-                  step="0.000000001"
-                  min="0.000000001"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 transition-colors"
-                />
-                <Text variant="extraSmall" color="muted">
-                  Minimum: 0.000000001 SOL (1 lamport) • Recommended: 0.001 SOL
-                </Text>
-              </div>
-
-              <Button
-                onClick={sendSOL}
-                disabled={
-                  isLoading ||
-                  !recipient ||
-                  !amount ||
-                  !isValidSolanaAddress(recipient)
-                }
-                className="w-full"
-                size="lg"
-              >
-                {isLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Sending...</span>
-                  </div>
-                ) : (
-                  "Send SOL"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Status Display */}
         {status && (

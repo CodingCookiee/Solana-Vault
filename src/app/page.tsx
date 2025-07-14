@@ -87,14 +87,14 @@ export default function Home() {
             <ProgramInteractions />
           </section> */}
 
-          {/* Custom Program Interactions */}
-          <section>
-            <ContractInteractions />
-          </section>
-
           {/* Devnet Token Operations */}
           <section>
             <AirDrop />
+          </section>
+
+          {/* Contract Interactions */}
+          <section>
+            <ContractInteractions />
           </section>
         </main>
       </div>

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useDexService } from "@/services/Defi";
