@@ -34,17 +34,18 @@ import { Idl } from "@coral-xyz/anchor";
 /**
  * Initialize user account
  */
-// Replace the problematic account check with proper null/undefined checking
-
 export const initializeUser = async (
   connection: Connection,
-  wallet: any,
-  program: Program<any>
-): Promise<DexOperationResult> => {
+  wallet: AnchorWallet
+): Promise<DexServiceResult> => {
   try {
     if (!wallet.publicKey) {
       throw new Error("Wallet not connected");
     }
+
+    // Create provider and program
+    const provider = new AnchorProvider(connection, wallet, {});
+    const program = new Program(dexIdl as Idl, provider);
 
     // Get the client account PDA
     const [clientPDA] = PublicKey.findProgramAddressSync(
@@ -52,7 +53,7 @@ export const initializeUser = async (
       program.programId
     );
 
-    // Check if account exists - FIXED VERSION
+    // Check if account exists
     let clientAccount;
     try {
       clientAccount = await program.account.userInfor.fetch(clientPDA);
@@ -79,10 +80,12 @@ export const initializeUser = async (
       })
       .rpc();
 
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+
     return {
       signature: tx,
       success: true,
-      error: null,
+      explorerUrl,
     };
   } catch (error) {
     console.error("Error initializing user:", error);
@@ -583,7 +586,7 @@ export const getUserAccountState = async (
 ): Promise<AccountState> => {
   try {
     const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user"), userPublicKey.toBuffer()],
+      [Buffer.from("client"), userPublicKey.toBuffer()],
       PROGRAM_ID
     );
 
