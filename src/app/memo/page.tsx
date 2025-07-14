@@ -31,12 +31,13 @@ export default function MemoPage() {
       setStatus("⏳ Sending memo...");
       const result = await memoService.sendMemo(memoText);
       
-      if (result.success) {
-        setStatus("✅ Memo sent successfully!");
-        if (result.explorerUrl) {
-          setStatus(`✅ Memo sent! View on Explorer: ${result.explorerUrl}`);
+      setStatus(`✅ Memo sent successfully!`);
+        if (result.data?.explorerUrl) {
+          setStatus(
+            `✅ Memo sent! View on Explorer: ${result.data.explorerUrl}`
+          );
         }
-      } else {
+       else {
         setStatus(`❌ Error: ${result.error}`);
       }
     } catch (error) {
@@ -46,7 +47,7 @@ export default function MemoPage() {
   };
 
   return (
-    // <AuthGate>
+    <AuthGate>
       <div className="max-w-4xl mx-auto p-6">
         <Memo
           memoText={memoText}
@@ -58,6 +59,6 @@ export default function MemoPage() {
           setStatus={setStatus}
         />
       </div>
-    // </AuthGate>
+    </AuthGate>
   );
 }

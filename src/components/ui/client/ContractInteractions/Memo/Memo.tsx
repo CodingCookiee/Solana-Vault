@@ -96,26 +96,34 @@ export const Memo: React.FC<MemoProps> = ({
 
         {/* Status Display */}
         {status && (
-          <Card className={
-            status.includes("❌")
-              ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-              : status.includes("✅")
-              ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-              : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
-          }>
+          <Card
+            className={
+              status.includes("❌")
+                ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                : status.includes("✅")
+                ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+            }
+          >
             <CardContent className="py-4">
               <div className="flex justify-between items-center">
-                <Text color={
-                  status.includes("❌") ? "error" :
-                  status.includes("✅") ? "success" : "primary"
-                } className="break-all">
+                <Text
+                  color={
+                    status.includes("❌")
+                      ? "error"
+                      : status.includes("✅")
+                      ? "success"
+                      : "primary"
+                  }
+                  className="break-all"
+                >
                   {status}
                 </Text>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setStatus("")}
-                  className="h-auto p-1"
+                  className="h-auto p-1  "
                 >
                   ×
                 </Button>

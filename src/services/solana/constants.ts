@@ -8,6 +8,7 @@ export const SOLANA_PROGRAMS = {
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
   ),
   DEX: new PublicKey("F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX"),
+  CRUD: new PublicKey("3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC"),
 };
 
 export const SOLANA_EXPLORER_BASE_URL = "https://explorer.solana.com";

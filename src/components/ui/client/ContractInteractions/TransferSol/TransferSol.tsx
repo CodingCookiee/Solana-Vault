@@ -115,6 +115,67 @@ export const TransferSol: React.FC<TransferSolProps> = ({
         >
           {systemService.loading ? "Transferring..." : "Transfer SOL"}
         </Button>
+
+        {/* Error Display */}
+        {systemService.error && (
+          <Card className="bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <Text color="error">{systemService.error}</Text>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={systemService.clearError}
+                  className="text-red-500 hover:text-red-700 h-auto p-1"
+                >
+                  ×
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status Display */}
+        {status && (
+          <Card className={
+            status.includes("❌")
+              ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+              : status.includes("✅")
+              ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+              : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+          }>
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <Text color={
+                  status.includes("❌") ? "error" :
+                  status.includes("✅") ? "success" : "primary"
+                } className="break-all">
+                  {status}
+                </Text>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStatus("")}
+                  className="h-auto p-1"
+                >
+                  ×
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading Indicator */}
+        {isLoading && (
+          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+            <CardContent className="py-4">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <Text color="primary">Processing transfer...</Text>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useDexService } from "@/services/Defi";
-import { 
-  Button, 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardContent, 
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
   CardDescription,
-  Text 
+  Text,
 } from "@/components/ui/common";
 
 /**
@@ -48,24 +48,25 @@ export const DeFi: React.FC = () => {
   const [transferAmount, setTransferAmount] = useState("");
   const [targetAddress, setTargetAddress] = useState("");
   const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("");
 
   const handleInitUser = async () => {
     if (!isWalletConnected) {
-      alert("Please connect your wallet first");
+      setStatus("Please connect your wallet first");
       return;
     }
 
     const result = await initUser();
     if (result.success) {
-      alert("User initialized successfully!");
+      setStatus("User initialized successfully!");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleBuySOL = async () => {
     if (!swapAmount || parseFloat(swapAmount) <= 0) {
-      alert("Please enter a valid amount");
+      setStatus("Please enter a valid amount");
       return;
     }
 
@@ -75,16 +76,16 @@ export const DeFi: React.FC = () => {
     });
 
     if (result.success) {
-      alert("SOL purchase successful!");
+      setStatus("SOL purchase successful!");
       setSwapAmount("");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleSellSOL = async () => {
     if (!swapAmount || parseFloat(swapAmount) <= 0) {
-      alert("Please enter a valid amount");
+      setStatus("Please enter a valid amount");
       return;
     }
 
@@ -95,16 +96,16 @@ export const DeFi: React.FC = () => {
     });
 
     if (result.success) {
-      alert("SOL sale successful!");
+      setStatus("SOL sale successful!");
       setSwapAmount("");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleAddLiquidity = async () => {
     if (!liquidityAmount || parseFloat(liquidityAmount) <= 0) {
-      alert("Please enter a valid amount");
+      setStatus("Please enter a valid amount");
       return;
     }
 
@@ -114,16 +115,16 @@ export const DeFi: React.FC = () => {
     });
 
     if (result.success) {
-      alert("Liquidity added successfully!");
+      setStatus("Liquidity added successfully!");
       setLiquidityAmount("");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleRemoveLiquidity = async () => {
     if (!liquidityAmount || parseFloat(liquidityAmount) <= 0) {
-      alert("Please enter a valid amount");
+      setStatus("Please enter a valid amount");
       return;
     }
 
@@ -133,21 +134,21 @@ export const DeFi: React.FC = () => {
     });
 
     if (result.success) {
-      alert("Liquidity removed successfully!");
+      setStatus("Liquidity removed successfully!");
       setLiquidityAmount("");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleTransferAssets = async () => {
     if (!transferAmount || parseFloat(transferAmount) <= 0) {
-      alert("Please enter a valid amount");
+      setStatus("Please enter a valid amount");
       return;
     }
 
     if (!targetAddress) {
-      alert("Please enter a target address");
+      setStatus("Please enter a target address");
       return;
     }
 
@@ -159,20 +160,20 @@ export const DeFi: React.FC = () => {
       });
 
       if (result.success) {
-        alert("Assets transferred successfully!");
+        setStatus("Assets transferred successfully!");
         setTransferAmount("");
         setTargetAddress("");
       } else {
-        alert(`Error: ${result.error}`);
+        console.error(`Error: ${result.error}`);
       }
     } catch (error) {
-      alert("Invalid target address");
+      console.error("Invalid target address");
     }
   };
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
-      alert("Please enter a message");
+      setStatus("Please enter a message");
       return;
     }
 
@@ -182,10 +183,10 @@ export const DeFi: React.FC = () => {
     });
 
     if (result.success) {
-      alert("Message sent successfully!");
+      setStatus("Message sent successfully!");
       setMessage("");
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
@@ -222,6 +223,24 @@ export const DeFi: React.FC = () => {
           <CardContent className="py-4">
             <div className="flex justify-between items-center">
               <Text color="error">{error}</Text>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearError}
+                className="text-red-500 hover:text-red-700 h-auto p-1"
+              >
+                ×
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {status && (
+        <Card className="bg-red-50 border-red-200 mb-6">
+          <CardContent className="py-4">
+            <div className="flex justify-between items-center">
+              <Text color="error">{status}</Text>
               <Button
                 variant="ghost"
                 size="sm"
@@ -347,7 +366,12 @@ export const DeFi: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Amount (SOL)
               </Text>
               <input
@@ -389,7 +413,12 @@ export const DeFi: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Amount (SOL)
               </Text>
               <input
@@ -431,7 +460,12 @@ export const DeFi: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Target Address
               </Text>
               <input
@@ -443,7 +477,12 @@ export const DeFi: React.FC = () => {
               />
             </div>
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Amount (SOL)
               </Text>
               <input
@@ -475,7 +514,12 @@ export const DeFi: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Target Address (optional)
               </Text>
               <input
@@ -487,7 +531,12 @@ export const DeFi: React.FC = () => {
               />
             </div>
             <div>
-              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+              <Text
+                variant="small"
+                weight="medium"
+                color="secondary"
+                className="block mb-2"
+              >
                 Message
               </Text>
               <textarea

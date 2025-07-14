@@ -1,0 +1,158 @@
+{
+  "accounts": [
+    {
+      "discriminator": [219, 112, 2, 117, 158, 76, 29, 55],
+      "name": "CrudEntryState"
+    }
+  ],
+  "address": "3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC",
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "name": "crud_entry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "discriminator": [52, 79, 186, 16, 139, 8, 79, 194],
+      "name": "create_crud_entry"
+    },
+    {
+      "accounts": [
+        {
+          "name": "crud_entry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        }
+      ],
+      "discriminator": [170, 8, 190, 38, 255, 222, 33, 201],
+      "name": "delete_crud_entry"
+    },
+    {
+      "accounts": [
+        {
+          "name": "crud_entry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "discriminator": [42, 189, 91, 195, 130, 223, 6, 240],
+      "name": "update_crud_entry"
+    }
+  ],
+  "metadata": {
+    "description": "Created with Anchor",
+    "name": "crudapp",
+    "spec": "0.1.0",
+    "version": "0.1.0"
+  },
+  "types": [
+    {
+      "name": "CrudEntryState",
+      "type": {
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "message",
+            "type": "string"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ]
+}
