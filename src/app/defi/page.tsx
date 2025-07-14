@@ -1,4 +1,3 @@
-"use client";
 
 import { DeFi } from "@/components/ui/client/ContractInteractions/Defi/DeFi";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";

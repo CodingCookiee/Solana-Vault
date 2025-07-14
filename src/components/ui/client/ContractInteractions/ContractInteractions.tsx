@@ -65,6 +65,11 @@ export const ContractInteractions: React.FC = () => {
                 Memo Program
               </Text>
             </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Send messages to the Solana blockchain using the Memo program
+              </Text>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -85,6 +90,11 @@ export const ContractInteractions: React.FC = () => {
                 Transfer SOL
               </Text>
             </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Send SOL tokens to other Solana addresses
+              </Text>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -105,6 +115,11 @@ export const ContractInteractions: React.FC = () => {
                 Account Reader
               </Text>
             </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Read and explore Solana account data and transactions
+              </Text>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -117,7 +132,7 @@ export const ContractInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Route to DeFi*/}
+        {/* DeFi */}
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>
@@ -125,6 +140,11 @@ export const ContractInteractions: React.FC = () => {
                 DeFi
               </Text>
             </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Interact with DeFi protocols, swap tokens, and provide liquidity
+              </Text>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -137,7 +157,31 @@ export const ContractInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-
+        {/* CRUD */}
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                CRUD Operations
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="body" color="muted">
+                Create, read, update, and delete entries on the Solana
+                blockchain
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/crud")}
+              variant="default"
+              className="w-full"
+            >
+              Go to CRUD Operations
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </AuthGate>
   );
@@ -145,16 +189,23 @@ export const ContractInteractions: React.FC = () => {
 
 // Helper component to display wallet balance
 const WalletBalance: React.FC = () => {
-  const systemService = useSystemService();
+  const { connection } = useConnection();
+  const wallet = useWallet();
   const [balance, setBalance] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     const loadBalance = async () => {
-      const bal = await systemService.getBalance();
-      setBalance(bal);
+      if (wallet.publicKey) {
+        try {
+          const bal = await connection.getBalance(wallet.publicKey);
+          setBalance(bal / 1000000000); // Convert lamports to SOL
+        } catch (error) {
+          console.error("Error loading balance:", error);
+        }
+      }
     };
     loadBalance();
-  }, [systemService]);
+  }, [connection, wallet.publicKey]);
 
   if (balance === null) {
     return (

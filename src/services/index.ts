@@ -4,8 +4,7 @@ export * from "./account";
 export * from "./memo";
 export * from "./system";
 export * from "./Defi";
-
-
+export * from "./crud";
 
 // Re-export commonly used functions from all services
 export {
@@ -40,7 +39,6 @@ export {
   CLUSTER,
 } from "./solana";
 
-
 export {
   // DeFi/DEX services
   useDexService,
@@ -58,3 +56,17 @@ export {
   getTradeQuote,
   PROGRAM_ID as DEX_PROGRAM_ID,
 } from "./Defi";
+
+export {
+  // CRUD services
+  useCrudService,
+  useUserCrudEntries,
+  createCrudEntry,
+  updateCrudEntry,
+  deleteCrudEntry,
+  getCrudEntry,
+  getUserCrudEntries,
+  validateCrudEntry,
+  validateTitle,
+  PROGRAM_ID as CRUD_PROGRAM_ID,
+} from "./crud";
