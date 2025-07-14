@@ -59,6 +59,6 @@ export default function MemoPage() {
           setStatus={setStatus}
         />
       </div>
-    {/* </AuthGate> */}
+    // </AuthGate> 
   );
 }
