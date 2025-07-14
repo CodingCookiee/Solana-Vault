@@ -6,7 +6,7 @@ import {
   Keypair,
 } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
+import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../constants";
 import { SystemTransferResult, SystemAccountResult } from "./system.types";
 
 /**
@@ -45,7 +45,7 @@ export const transferSol = async (
       success: true,
       data: {
         amount,
-        recipient: recipientAddress.toBase58(),
+        recipient: recipientAddress,
         explorerUrl: `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`,
       },
     };
