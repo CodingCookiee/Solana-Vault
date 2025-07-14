@@ -173,7 +173,7 @@ export const ContractInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h3" color="primary">
-                Custom Solana Program Interactions
+                Contract Interactions
               </Text>
             </CardTitle>
             <CardDescription>
