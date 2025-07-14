@@ -8,6 +8,8 @@ import React, {
   ReactNode,
 } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { ed25519 } from "@noble/curves/ed25519";
+import bs58 from "bs58";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -34,6 +36,18 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Auth token structure
+interface AuthToken {
+  publicKey: string;
+  signature: string;
+  message: string;
+  timestamp: number;
+  expiresAt: number;
+}
+
+// Token validity duration (24 hours)
+const TOKEN_VALIDITY_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { publicKey, signMessage, connected, disconnect, connecting } =
     useWallet();
@@ -50,6 +64,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const nonce = Math.random().toString(36).substring(2, 15);
     return `Welcome to Solana Wallet App!\n\nPlease sign this message to verify your wallet ownership and access the application.\n\nTimestamp: ${timestamp}\nNonce: ${nonce}`;
   });
+
+  // Utility functions for localStorage
+  const getStoredToken = (walletAddress: string): AuthToken | null => {
+    try {
+      const stored = localStorage.getItem(`auth_token_${walletAddress}`);
+      if (!stored) return null;
+      
+      const token: AuthToken = JSON.parse(stored);
+      
+      // Check if token is expired
+      if (Date.now() > token.expiresAt) {
+        localStorage.removeItem(`auth_token_${walletAddress}`);
+        return null;
+      }
+      
+      return token;
+    } catch (error) {
+      console.error("Error reading stored token:", error);
+      return null;
+    }
+  };
+
+  const storeToken = (token: AuthToken) => {
+    try {
+      localStorage.setItem(`auth_token_${token.publicKey}`, JSON.stringify(token));
+    } catch (error) {
+      console.error("Error storing token:", error);
+    }
+  };
+
+  const clearStoredToken = (walletAddress: string) => {
+    try {
+      localStorage.removeItem(`auth_token_${walletAddress}`);
+    } catch (error) {
+      console.error("Error clearing stored token:", error);
+    }
+  };
+
+  // Verify signature is valid
+  const verifySignature = (message: string, signature: string, publicKeyString: string): boolean => {
+    try {
+      const messageBytes = new TextEncoder().encode(message);
+      const signatureBytes = Buffer.from(signature, 'base64');
+      const publicKeyBytes = bs58.decode(publicKeyString);
+      
+      return ed25519.verify(signatureBytes, messageBytes, publicKeyBytes);
+    } catch (error) {
+      console.error("Error verifying signature:", error);
+      return false;
+    }
+  };
+
+  // Check for stored valid token on wallet connection
+  useEffect(() => {
+    if (connected && publicKey) {
+      const walletAddress = publicKey.toBase58();
+      const storedToken = getStoredToken(walletAddress);
+      
+      if (storedToken && verifySignature(storedToken.message, storedToken.signature, storedToken.publicKey)) {
+        setIsAuthenticated(true);
+        setSignature(storedToken.signature);
+        setShowAuthModal(false);
+        setHasShownModalForCurrentWallet(true); // Skip modal since we have valid token
+      }
+    }
+  }, [connected, publicKey]);
 
   // Reset authentication when wallet disconnects or changes
   useEffect(() => {
@@ -118,6 +198,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSignature(signatureBase64);
       setIsAuthenticated(true);
       setShowAuthModal(false);
+
+      // Create and store auth token
+      const now = Date.now();
+      const authToken: AuthToken = {
+        publicKey: publicKey.toBase58(),
+        signature: signatureBase64,
+        message: authMessage,
+        timestamp: now,
+        expiresAt: now + TOKEN_VALIDITY_DURATION
+      };
+
+      storeToken(authToken);
     } catch (error) {
       console.error("Authentication failed:", error);
       throw error;
@@ -127,6 +219,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear stored token if publicKey exists
+    if (publicKey) {
+      clearStoredToken(publicKey.toBase58());
+      localStorage.clear();
+    }
+    
     setIsAuthenticated(false);
     setSignature(null);
     setShowAuthModal(false);
