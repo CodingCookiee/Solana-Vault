@@ -1,0 +1,747 @@
+{
+  "version": "0.1.0",
+  "name": "sfcvnd",
+  "instructions": [
+    {
+      "name": "userMessageTarget",
+      "accounts": [
+        {
+          "name": "toclient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "fromclient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "flashTarget",
+          "type": "publicKey"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "userMessage",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "changeName",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "changeNameTarget",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "flashTarget",
+          "type": "publicKey"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "lockTarget",
+      "accounts": [
+        {
+          "name": "target",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "targetkey",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "initUser",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "clearUser",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "solDestination",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdrawAsset",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "flashTarget",
+          "type": "publicKey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "depositAsset",
+      "accounts": [
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "flashTarget",
+          "type": "publicKey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "tranferAsset",
+      "accounts": [
+        {
+          "name": "toclient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "fromclient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "flashTarget",
+          "type": "publicKey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "tranferSol",
+      "accounts": [
+        {
+          "name": "target",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "tranferToken",
+      "accounts": [
+        {
+          "name": "fromtoken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "totoken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "choose",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "buySol",
+      "accounts": [
+        {
+          "name": "vaultsol",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amountin",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sellSol",
+      "accounts": [
+        {
+          "name": "vaultsol",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amountin",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "provideLiquidity",
+      "accounts": [
+        {
+          "name": "vaultsol",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donatorsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donatorlp",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdrawLiquidity",
+      "accounts": [
+        {
+          "name": "vaultsol",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donatorsfc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donatorlp",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "tributeAsset",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tk",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "summonAsset",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "donator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tk",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "token",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "UserInfor",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "assetAccount",
+            "type": "u64"
+          },
+          {
+            "name": "accountName",
+            "type": "string"
+          },
+          {
+            "name": "kValue",
+            "type": "f64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserTarget",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "assetTarget",
+            "type": {
+              "vec": "publicKey"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PriceUnderSlippage",
+      "msg": "Dev Sol price under slippage"
+    },
+    {
+      "code": 6001,
+      "name": "PriceOverSlippage",
+      "msg": "Dev Sol price over slippage"
+    },
+    {
+      "code": 6002,
+      "name": "NotEnoughVND",
+      "msg": "Not enough VND"
+    },
+    {
+      "code": 6003,
+      "name": "NotEnoughSFCVND",
+      "msg": "Not enough SFC - VND"
+    },
+    {
+      "code": 6004,
+      "name": "VaultNotEnoughSFCVND",
+      "msg": "Vault not enough SFC - VND"
+    },
+    {
+      "code": 6005,
+      "name": "YouNotEnoughSFCVND",
+      "msg": "You not enough SFC - VND"
+    },
+    {
+      "code": 6006,
+      "name": "YouNotEnoughLPSFC",
+      "msg": "You not enough LPSFC"
+    },
+    {
+      "code": 6007,
+      "name": "NotEnoughSol",
+      "msg": "Not enough Sol"
+    },
+    {
+      "code": 6008,
+      "name": "VaultNotEnoughSol",
+      "msg": "Vault not enough Sol"
+    },
+    {
+      "code": 6009,
+      "name": "YouNotEnoughSol",
+      "msg": "You not enough Sol"
+    },
+    {
+      "code": 6010,
+      "name": "AccountNotEmpty",
+      "msg": "Account not empty"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidTargetKey",
+      "msg": "Invalid target key"
+    },
+    {
+      "code": 6013,
+      "name": "AccountAlreadyInitialized",
+      "msg": "Account already initialized"
+    },
+    {
+      "code": 6014,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidAuthority",
+      "msg": "InvalidAuthority"
+    },
+    {
+      "code": 6016,
+      "name": "NameIsEmpty",
+      "msg": "Name is empty"
+    },
+    {
+      "code": 6017,
+      "name": "MessageIsEmpty",
+      "msg": "Message is empty"
+    }
+  ]
+}
