@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import {
   initializeUser,
@@ -34,6 +34,7 @@ import {
 export const useDexService = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
+  const anchorWallet = useAnchorWallet();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,13 +46,13 @@ export const useDexService = () => {
 
   // Initialize user account
   const initUser = useCallback(async (): Promise<DexServiceResult> => {
-    if (!wallet.connected || !wallet.publicKey) {
+    if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
       const result: DexServiceResult = {
         signature: "",
         success: false,
-        error: "Wallet not connected",
+        error: "Wallet not connected or anchor wallet not available",
       };
-      setError("Wallet not connected");
+      setError("Wallet not connected or anchor wallet not available");
       return result;
     }
 
@@ -59,7 +60,7 @@ export const useDexService = () => {
       setLoading(true);
       setError(null);
 
-      const result = await initializeUser(connection, wallet as any);
+      const result = await initializeUser(connection, anchorWallet);
 
       if (!result.success) {
         setError(result.error || "Failed to initialize user");
@@ -80,18 +81,18 @@ export const useDexService = () => {
     } finally {
       setLoading(false);
     }
-  }, [connection, wallet]);
+  }, [connection, wallet, anchorWallet]);
 
   // Buy SOL with SFC
   const buySOL = useCallback(
     async (params: SwapParams): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -110,7 +111,7 @@ export const useDexService = () => {
         setLoading(true);
         setError(null);
 
-        const result = await buySol(connection, wallet as any, params);
+        const result = await buySol(connection, anchorWallet, params);
 
         if (!result.success) {
           setError(result.error || "Failed to buy SOL");
@@ -134,7 +135,7 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Sell SOL for SFC
@@ -142,13 +143,13 @@ export const useDexService = () => {
     async (
       params: SwapParams & { bump: number }
     ): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -167,7 +168,7 @@ export const useDexService = () => {
         setLoading(true);
         setError(null);
 
-        const result = await sellSol(connection, wallet as any, params);
+        const result = await sellSol(connection, anchorWallet, params);
 
         if (!result.success) {
           setError(result.error || "Failed to sell SOL");
@@ -191,19 +192,19 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Provide liquidity
   const addLiquidity = useCallback(
     async (params: LiquidityParams): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -224,7 +225,7 @@ export const useDexService = () => {
 
         const result = await provideLiquidity(
           connection,
-          wallet as any,
+          anchorWallet,
           params
         );
 
@@ -250,19 +251,19 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Remove liquidity
   const removeLiquidity = useCallback(
     async (params: LiquidityParams): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -283,7 +284,7 @@ export const useDexService = () => {
 
         const result = await withdrawLiquidity(
           connection,
-          wallet as any,
+          anchorWallet,
           params
         );
 
@@ -309,19 +310,19 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Transfer assets
   const transferAssets = useCallback(
     async (params: AssetTransferParams): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -339,7 +340,7 @@ export const useDexService = () => {
         setLoading(true);
         setError(null);
 
-        const result = await transferAsset(connection, wallet as any, params);
+        const result = await transferAsset(connection, anchorWallet, params);
 
         if (!result.success) {
           setError(result.error || "Failed to transfer assets");
@@ -362,19 +363,19 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Send message
   const sendUserMessage = useCallback(
     async (params: MessageParams): Promise<DexServiceResult> => {
-      if (!wallet.connected || !wallet.publicKey) {
+      if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
         const result: DexServiceResult = {
           signature: "",
           success: false,
-          error: "Wallet not connected",
+          error: "Wallet not connected or anchor wallet not available",
         };
-        setError("Wallet not connected");
+        setError("Wallet not connected or anchor wallet not available");
         return result;
       }
 
@@ -392,7 +393,7 @@ export const useDexService = () => {
         setLoading(true);
         setError(null);
 
-        const result = await sendMessage(connection, wallet as any, params);
+        const result = await sendMessage(connection, anchorWallet, params);
 
         if (!result.success) {
           setError(result.error || "Failed to send message");
@@ -412,7 +413,7 @@ export const useDexService = () => {
         setLoading(false);
       }
     },
-    [connection, wallet]
+    [connection, wallet, anchorWallet]
   );
 
   // Get trade quote

@@ -38,8 +38,18 @@ export const initializeUser = async (
   wallet: AnchorWallet
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    // Validate wallet
+    if (!wallet || !wallet.publicKey) {
+      throw new Error("Wallet not properly connected");
+    }
+
+    const provider = new AnchorProvider(connection, wallet, {
+      commitment: "confirmed",
+      preflightCommitment: "confirmed",
+    });
+    
+    // Set the provider to avoid _bn property issues
+    const program = new Program(dexIdl as any, provider);
 
     const [userPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.publicKey.toBuffer()],
@@ -82,7 +92,7 @@ export const buySol = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -140,7 +150,7 @@ export const sellSol = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -199,7 +209,7 @@ export const provideLiquidity = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -270,7 +280,7 @@ export const withdrawLiquidity = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -341,7 +351,7 @@ export const transferAsset = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [fromUserPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.publicKey.toBuffer()],
@@ -391,7 +401,7 @@ export const sendMessage = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, PROGRAM_ID, provider);
+    const program = new Program(dexIdl as any, provider);
 
     const [userPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.publicKey.toBuffer()],
