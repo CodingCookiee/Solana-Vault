@@ -8,8 +8,10 @@ export {
   sendMemoMessage,
   validateMemoMessage,
   getMemoProgram,
+  getMemoProgamInfo,
   getMemoTransactionCost,
   isMemoProgram,
   parseMemoFromTransaction,
-  useMemoService,
 } from "./memo.service";
+
+export { useMemoService } from "./memo.hooks";

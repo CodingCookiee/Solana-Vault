@@ -1,15 +1,15 @@
-// Main entry point for all Solana services
-export * from "./types";
-export * from "./constants";
-
-// Service exports
+// Main entry point for all services
+export * from "./solana";
+export * from "./account";
 export * from "./memo";
 export * from "./system";
-export * from "./account";
 
-// Convenience exports for commonly used functions
+// Legacy/convenience exports
+export * from "./real-program-interactions";
+
+// Re-export commonly used functions from all services
 export {
-  // Memo
+  // Memo services
   sendMemoMessage,
   validateMemoMessage,
   getMemoProgram,
@@ -17,16 +17,15 @@ export {
 } from "./memo";
 
 export {
-  // System
+  // System services
   transferSol,
   createDataAccount,
   getAccountBalance,
   validateSolAmount,
-  useSystemService,
 } from "./system";
 
 export {
-  // Account
+  // Account services
   readAccountData,
   checkAccountExists,
   getAccountTransactions,
@@ -35,8 +34,14 @@ export {
 } from "./account";
 
 export {
-  // Constants
+  // Solana constants and types
   SOLANA_PROGRAMS,
   SOLANA_EXPLORER_BASE_URL,
   CLUSTER,
-} from "./constants";
+} from "./solana";
+
+export {
+  // Real program interactions (legacy)
+  useRealProgramInteractions,
+  REAL_PROGRAMS,
+} from "./real-program-interactions";

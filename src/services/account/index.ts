@@ -12,5 +12,6 @@ export {
   getProgramAccounts,
   getMultipleAccountsData,
   getAccountRentInfo,
-  useAccountService,
 } from "./account.service";
+
+export { useAccountService } from "./account.hooks";

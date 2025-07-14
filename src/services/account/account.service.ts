@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../constants";
+import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
 import { AccountInfo, TransactionInfo } from "../types";
 import { AccountExistsResult, ProgramAccountInfo } from "./account.types";
 

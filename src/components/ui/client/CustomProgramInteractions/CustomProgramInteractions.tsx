@@ -561,31 +561,7 @@ export const CustomProgramInteractions: React.FC = () => {
           </Card>
         )}
 
-        {/* Wallet Balance Display */}
-        {wallet.publicKey && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h5" color="default">
-                  💳 Wallet Information
-                </Text>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div>
-                  <Text variant="small" weight="medium">
-                    Connected Wallet:
-                  </Text>
-                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                    {wallet.publicKey.toBase58()}
-                  </div>
-                </div>
-                <WalletBalance />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      
       </div>
     </AuthGate>
   );
@@ -593,7 +569,6 @@ export const CustomProgramInteractions: React.FC = () => {
 
 // Helper component to display wallet balance
 const WalletBalance: React.FC = () => {
-  const { useSystemService } = require("@/services/solana/system");
   const systemService = useSystemService();
   const [balance, setBalance] = React.useState<number | null>(null);
 

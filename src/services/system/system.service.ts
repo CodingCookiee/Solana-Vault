@@ -6,7 +6,7 @@ import {
   Keypair,
 } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../constants";
+import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
 import { SystemTransferResult, SystemAccountResult } from "./system.types";
 
 /**
