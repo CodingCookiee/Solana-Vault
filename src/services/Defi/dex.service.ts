@@ -29,48 +29,60 @@ import {
   AccountState,
 } from "./dex.types";
 import dexIdl from "./dex.idl.json";
+import { Idl } from "@coral-xyz/anchor";
 
 /**
  * Initialize user account
  */
+// Replace the problematic account check with proper null/undefined checking
+
 export const initializeUser = async (
   connection: Connection,
-  wallet: AnchorWallet
-): Promise<DexServiceResult> => {
+  wallet: any,
+  program: Program<any>
+): Promise<DexOperationResult> => {
   try {
-    // Validate wallet
-    if (!wallet || !wallet.publicKey) {
-      throw new Error("Wallet not properly connected");
+    if (!wallet.publicKey) {
+      throw new Error("Wallet not connected");
     }
 
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    
-    // Set the provider to avoid _bn property issues
-    const program = new Program(dexIdl as any, provider);
-
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
+    // Get the client account PDA
+    const [clientPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("client"), wallet.publicKey.toBuffer()],
+      program.programId
     );
 
+    // Check if account exists - FIXED VERSION
+    let clientAccount;
+    try {
+      clientAccount = await program.account.userInfor.fetch(clientPDA);
+      // Account exists, check if already initialized
+      if (clientAccount) {
+        return {
+          signature: "",
+          success: false,
+          error: "Account already initialized",
+        };
+      }
+    } catch (error) {
+      // Account doesn't exist, which is expected for initialization
+      console.log("Account doesn't exist yet, proceeding with initialization");
+    }
+
+    // Initialize the user account
     const tx = await program.methods
       .initUser()
       .accounts({
-        client: userPDA,
+        client: clientPDA,
         signer: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
-
     return {
       signature: tx,
       success: true,
-      explorerUrl,
+      error: null,
     };
   } catch (error) {
     console.error("Error initializing user:", error);
@@ -92,7 +104,7 @@ export const buySol = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -150,7 +162,7 @@ export const sellSol = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -209,7 +221,7 @@ export const provideLiquidity = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -280,7 +292,7 @@ export const withdrawLiquidity = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [solVault] = PublicKey.findProgramAddressSync(
       [Buffer.from("sol_vault")],
@@ -351,7 +363,7 @@ export const transferAsset = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [fromUserPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.publicKey.toBuffer()],
@@ -401,7 +413,7 @@ export const sendMessage = async (
 ): Promise<DexServiceResult> => {
   try {
     const provider = new AnchorProvider(connection, wallet, {});
-    const program = new Program(dexIdl as any, provider);
+    const program = new Program(dexIdl as Idl, provider);
 
     const [userPDA] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.publicKey.toBuffer()],

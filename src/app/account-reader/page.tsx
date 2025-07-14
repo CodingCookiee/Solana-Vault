@@ -42,7 +42,7 @@ export default function AccountReaderPage() {
   };
 
   return (
-    // <AuthGate>
+    <AuthGate>
       <div className="max-w-4xl mx-auto p-6">
         <AccountReader
           accountToRead={accountToRead}
@@ -56,6 +56,6 @@ export default function AccountReaderPage() {
           setStatus={setStatus}
         />
       </div>
-    // </AuthGate>
+    </AuthGate>
   );
 }

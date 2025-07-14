@@ -47,7 +47,7 @@ export default function MemoPage() {
   };
 
   return (
-    // <AuthGate>
+    <AuthGate>
       <div className="max-w-4xl mx-auto p-6">
         <Memo
           memoText={memoText}
@@ -59,6 +59,6 @@ export default function MemoPage() {
           setStatus={setStatus}
         />
       </div>
-    // </AuthGate> 
+    </AuthGate> 
   );
 }

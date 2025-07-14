@@ -1,6 +1,7 @@
 {
   "version": "0.1.0",
   "name": "sfcvnd",
+  "address": "F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX",
   "instructions": [
     {
       "name": "userMessageTarget",

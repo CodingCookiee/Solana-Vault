@@ -5,10 +5,10 @@ import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
 
 export default function DeFiPage() {
   return (
-    // <AuthGate>
+    <AuthGate>
       <div className="max-w-4xl mx-auto p-6">
         <DeFi />
       </div>
-    // </AuthGate>
+    </AuthGate>
   );
 }
