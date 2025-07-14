@@ -7,7 +7,7 @@ export const SOLANA_PROGRAMS = {
   ASSOCIATED_TOKEN: new PublicKey(
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
   ),
-  GUESTBOOK: new PublicKey("F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX"),
+  DEX: new PublicKey("F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX"),
 };
 
 export const SOLANA_EXPLORER_BASE_URL = "https://explorer.solana.com";

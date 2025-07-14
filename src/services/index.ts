@@ -3,6 +3,7 @@ export * from "./solana";
 export * from "./account";
 export * from "./memo";
 export * from "./system";
+export * from "./Defi";
 
 // Legacy/convenience exports
 export * from "./real-program-interactions";
@@ -45,3 +46,21 @@ export {
   useRealProgramInteractions,
   REAL_PROGRAMS,
 } from "./real-program-interactions";
+
+export {
+  // DeFi/DEX services
+  useDexService,
+  usePoolInfo,
+  useUserBalance,
+  initializeUser,
+  buySol,
+  sellSol,
+  provideLiquidity,
+  withdrawLiquidity,
+  transferAsset,
+  sendMessage,
+  getPoolInfo,
+  getUserBalance,
+  getTradeQuote,
+  PROGRAM_ID as DEX_PROGRAM_ID,
+} from "./Defi";

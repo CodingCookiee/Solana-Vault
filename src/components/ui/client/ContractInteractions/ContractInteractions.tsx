@@ -19,6 +19,7 @@ import { useMemoService } from "@/services/memo";
 import { useSystemService } from "@/services/system";
 import { useAccountService } from "@/services/account";
 import { SOLANA_PROGRAMS } from "@/services/constants";
+import { Defi } from "@Defi/Defi";
 
 export const ContractInteractions: React.FC = () => {
   const { connection } = useConnection();
@@ -408,50 +409,7 @@ export const ContractInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Program IDs Reference */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                📋 Program IDs Reference
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Common Solana program addresses
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Text variant="small" weight="medium">
-                    System Program:
-                  </Text>
-                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                    {SOLANA_PROGRAMS.SYSTEM.toBase58()}
-                  </div>
-                </div>
-                <div>
-                  <Text variant="small" weight="medium">
-                    Memo Program (Working):
-                  </Text>
-                  <div className="bg-green-100 dark:bg-green-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                    {SOLANA_PROGRAMS.MEMO.toBase58()}
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <Text variant="extraSmall" color="muted">
-                  💡 Tip: The Memo Program is fully functional - try sending a
-                  message! You can also use these addresses to read account
-                  data.
-                </Text>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      
 
         {/* Service Status Display */}
         {(memoService.error || systemService.error || accountService.error) && (
