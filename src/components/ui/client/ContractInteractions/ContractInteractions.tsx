@@ -20,7 +20,7 @@ import { useSystemService } from "@/services/system";
 import { useAccountService } from "@/services/account";
 import { SOLANA_PROGRAMS } from "@/services/constants";
 
-export const CustomProgramInteractions: React.FC = () => {
+export const ContractInteractions: React.FC = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
 
@@ -560,8 +560,6 @@ export const CustomProgramInteractions: React.FC = () => {
             </CardContent>
           </Card>
         )}
-
-      
       </div>
     </AuthGate>
   );
