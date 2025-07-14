@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useDexService } from "@/services/Defi";
+import { 
+  Button, 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardContent, 
+  CardDescription,
+  Text 
+} from "@/components/ui/common";
 
 /**
  * Example component showing how to use the DeFi services
  */
-export const Defi: React.FC = () => {
+export const DeFi: React.FC = () => {
   const {
     // Operations
     initUser,
@@ -181,250 +190,324 @@ export const Defi: React.FC = () => {
   if (!isWalletConnected) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <h2 className="text-xl font-semibold text-yellow-800 mb-2">
-            Wallet Not Connected
-          </h2>
-          <p className="text-yellow-700">
-            Please connect your wallet to use the DeFi features.
-          </p>
-        </div>
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h4" color="warning">
+                Wallet Not Connected
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text color="warning">
+                Please connect your wallet to use the DeFi features.
+              </Text>
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">DeFi Interface</h1>
+      <Text variant="h1" className="mb-6">
+        DeFi Interface
+      </Text>
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex justify-between items-center">
-            <p className="text-red-700">{error}</p>
-            <button
-              onClick={clearError}
-              className="text-red-500 hover:text-red-700"
-            >
-              ×
-            </button>
-          </div>
-        </div>
+        <Card className="bg-red-50 border-red-200 mb-6">
+          <CardContent className="py-4">
+            <div className="flex justify-between items-center">
+              <Text color="error">{error}</Text>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearError}
+                className="text-red-500 hover:text-red-700 h-auto p-1"
+              >
+                ×
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-blue-700">Processing transaction...</p>
-        </div>
+        <Card className="bg-blue-50 border-blue-200 mb-6">
+          <CardContent className="py-4">
+            <Text color="primary">Processing transaction...</Text>
+          </CardContent>
+        </Card>
       )}
 
       {/* Account Status */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-2">Account Status</h2>
-        <p className="text-gray-700">
-          Initialized: {accountState.isInitialized ? "Yes" : "No"}
-        </p>
-        {!accountState.isInitialized && (
-          <button
-            onClick={handleInitUser}
-            disabled={loading}
-            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-          >
-            Initialize User Account
-          </button>
-        )}
-      </div>
+      <Card className="bg-gray-50 border-gray-200 mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Account Status</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Text color="secondary" className="mb-4">
+            Initialized: {accountState.isInitialized ? "Yes" : "No"}
+          </Text>
+          {!accountState.isInitialized && (
+            <Button
+              onClick={handleInitUser}
+              disabled={loading}
+              variant="default"
+            >
+              Initialize User Account
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Pool Information */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-2">Pool Information</h2>
-        {poolInfo ? (
-          <div className="space-y-2">
-            <p>SOL Balance: {poolInfo.solBalance.toFixed(4)} SOL</p>
-            <p>SFC Balance: {poolInfo.sfcBalance.toFixed(4)} SFC</p>
-            <p>LP Token Supply: {poolInfo.lpTokenSupply.toFixed(4)}</p>
-          </div>
-        ) : (
-          <p className="text-gray-500">Loading pool information...</p>
-        )}
-        <button
-          onClick={refreshPoolInfo}
-          disabled={loading}
-          className="mt-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-        >
-          Refresh Pool Info
-        </button>
-      </div>
+      <Card className="bg-gray-50 border-gray-200 mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Pool Information</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {poolInfo ? (
+            <div className="space-y-2 mb-4">
+              <Text color="secondary">
+                SOL Balance: {poolInfo.solBalance.toFixed(4)} SOL
+              </Text>
+              <Text color="secondary">
+                SFC Balance: {poolInfo.sfcBalance.toFixed(4)} SFC
+              </Text>
+              <Text color="secondary">
+                LP Token Supply: {poolInfo.lpTokenSupply.toFixed(4)}
+              </Text>
+            </div>
+          ) : (
+            <Text color="muted" className="mb-4">
+              Loading pool information...
+            </Text>
+          )}
+          <Button
+            onClick={refreshPoolInfo}
+            disabled={loading}
+            variant="secondary"
+          >
+            Refresh Pool Info
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* User Balance */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-2">Your Balance</h2>
-        {userBalance ? (
-          <div className="space-y-2">
-            <p>SOL: {userBalance.sol.toFixed(4)} SOL</p>
-            <p>SFC: {userBalance.sfc.toFixed(4)} SFC</p>
-            <p>LP Tokens: {userBalance.lpTokens.toFixed(4)}</p>
-          </div>
-        ) : (
-          <p className="text-gray-500">Loading balance...</p>
-        )}
-        <button
-          onClick={refreshUserBalance}
-          disabled={loading}
-          className="mt-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-        >
-          Refresh Balance
-        </button>
-      </div>
+      <Card className="bg-gray-50 border-gray-200 mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Your Balance</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {userBalance ? (
+            <div className="space-y-2 mb-4">
+              <Text color="secondary">
+                SOL: {userBalance.sol.toFixed(4)} SOL
+              </Text>
+              <Text color="secondary">
+                SFC: {userBalance.sfc.toFixed(4)} SFC
+              </Text>
+              <Text color="secondary">
+                LP Tokens: {userBalance.lpTokens.toFixed(4)}
+              </Text>
+            </div>
+          ) : (
+            <Text color="muted" className="mb-4">
+              Loading balance...
+            </Text>
+          )}
+          <Button
+            onClick={refreshUserBalance}
+            disabled={loading}
+            variant="secondary"
+          >
+            Refresh Balance
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Trading Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Trading</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amount (SOL)
-            </label>
-            <input
-              type="number"
-              value={swapAmount}
-              onChange={(e) => setSwapAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Trading</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Amount (SOL)
+              </Text>
+              <input
+                type="number"
+                value={swapAmount}
+                onChange={(e) => setSwapAmount(e.target.value)}
+                placeholder="Enter amount"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleBuySOL}
+                disabled={loading || !accountState.isInitialized}
+                className="flex-1 bg-green-500 hover:bg-green-600"
+              >
+                Buy SOL
+              </Button>
+              <Button
+                onClick={handleSellSOL}
+                disabled={loading || !accountState.isInitialized}
+                variant="destructive"
+                className="flex-1"
+              >
+                Sell SOL
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleBuySOL}
-              disabled={loading || !accountState.isInitialized}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-            >
-              Buy SOL
-            </button>
-            <button
-              onClick={handleSellSOL}
-              disabled={loading || !accountState.isInitialized}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-            >
-              Sell SOL
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Liquidity Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Liquidity</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amount (SOL)
-            </label>
-            <input
-              type="number"
-              value={liquidityAmount}
-              onChange={(e) => setLiquidityAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Liquidity</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Amount (SOL)
+              </Text>
+              <input
+                type="number"
+                value={liquidityAmount}
+                onChange={(e) => setLiquidityAmount(e.target.value)}
+                placeholder="Enter amount"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAddLiquidity}
+                disabled={loading || !accountState.isInitialized}
+                className="flex-1"
+              >
+                Add Liquidity
+              </Button>
+              <Button
+                onClick={handleRemoveLiquidity}
+                disabled={loading || !accountState.isInitialized}
+                variant="secondary"
+                className="flex-1"
+              >
+                Remove Liquidity
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddLiquidity}
-              disabled={loading || !accountState.isInitialized}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-            >
-              Add Liquidity
-            </button>
-            <button
-              onClick={handleRemoveLiquidity}
-              disabled={loading || !accountState.isInitialized}
-              className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-            >
-              Remove Liquidity
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Transfer Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Transfer Assets</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Target Address
-            </label>
-            <input
-              type="text"
-              value={targetAddress}
-              onChange={(e) => setTargetAddress(e.target.value)}
-              placeholder="Enter target public key"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Transfer Assets</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Target Address
+              </Text>
+              <input
+                type="text"
+                value={targetAddress}
+                onChange={(e) => setTargetAddress(e.target.value)}
+                placeholder="Enter target public key"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Amount (SOL)
+              </Text>
+              <input
+                type="number"
+                value={transferAmount}
+                onChange={(e) => setTransferAmount(e.target.value)}
+                placeholder="Enter amount"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <Button
+              onClick={handleTransferAssets}
+              disabled={loading || !accountState.isInitialized}
+              className="w-full bg-purple-500 hover:bg-purple-600"
+            >
+              Transfer Assets
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amount (SOL)
-            </label>
-            <input
-              type="number"
-              value={transferAmount}
-              onChange={(e) => setTransferAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            onClick={handleTransferAssets}
-            disabled={loading || !accountState.isInitialized}
-            className="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-          >
-            Transfer Assets
-          </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Message Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Send Message</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Target Address (optional)
-            </label>
-            <input
-              type="text"
-              value={targetAddress}
-              onChange={(e) => setTargetAddress(e.target.value)}
-              placeholder="Enter target public key (leave empty for general message)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Text variant="h4">Send Message</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Target Address (optional)
+              </Text>
+              <input
+                type="text"
+                value={targetAddress}
+                onChange={(e) => setTargetAddress(e.target.value)}
+                placeholder="Enter target public key (leave empty for general message)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Text variant="small" weight="medium" color="secondary" className="block mb-2">
+                Message
+              </Text>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Enter your message"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <Button
+              onClick={handleSendMessage}
+              disabled={loading || !accountState.isInitialized}
+              className="w-full bg-green-500 hover:bg-green-600"
+            >
+              Send Message
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Message
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter your message"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={loading || !accountState.isInitialized}
-            className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-          >
-            Send Message
-          </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default Defi;
+export default DeFi;

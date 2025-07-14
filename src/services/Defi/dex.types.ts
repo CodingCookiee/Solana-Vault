@@ -1,12 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
-import { REAL_PROGRAMS } from "./index.ts";
+import { SOLANA_PROGRAMS } from "../index";
 
 /**
  * DeFi/DEX Program Types
  */
 
 // Program constants
-export const PROGRAM_ID = REAL_PROGRAMS.DEX;
+export const PROGRAM_ID = SOLANA_PROGRAMS.DEX;
 
 // Account types from IDL
 export interface UserInfor {

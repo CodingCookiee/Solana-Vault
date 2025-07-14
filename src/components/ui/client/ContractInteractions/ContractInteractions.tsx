@@ -19,7 +19,7 @@ import { useMemoService } from "@/services/memo";
 import { useSystemService } from "@/services/system";
 import { useAccountService } from "@/services/account";
 import { SOLANA_PROGRAMS } from "@/services/constants";
-import { Defi } from "@Defi/Defi";
+import { DeFi } from "./Defi/DeFi";
 
 export const ContractInteractions: React.FC = () => {
   const { connection } = useConnection();
@@ -238,7 +238,7 @@ export const ContractInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h5" color="default">
-                💰 SOL Transfer (Live on Devnet)
+                💰 SOL Transfer
               </Text>
             </CardTitle>
             <CardDescription>
@@ -408,6 +408,9 @@ export const ContractInteractions: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* DeFi Component */}
+        <DeFi />
 
       
 

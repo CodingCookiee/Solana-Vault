@@ -5,8 +5,7 @@ export * from "./memo";
 export * from "./system";
 export * from "./Defi";
 
-// Legacy/convenience exports
-export * from "./real-program-interactions";
+
 
 // Re-export commonly used functions from all services
 export {
@@ -41,11 +40,6 @@ export {
   CLUSTER,
 } from "./solana";
 
-export {
-  // Real program interactions (legacy)
-  useRealProgramInteractions,
-  REAL_PROGRAMS,
-} from "./real-program-interactions";
 
 export {
   // DeFi/DEX services
