@@ -1,5 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
-import { useConnection, useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
+import {
+  useConnection,
+  useWallet,
+  useAnchorWallet,
+} from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import {
   initializeUser,
@@ -29,7 +33,7 @@ import {
 } from "./dex.types";
 
 /**
- * Hook for DeFi/DEX operations
+ * Hook for DeFi/DEX operations with Anchor support
  */
 export const useDexService = () => {
   const { connection } = useConnection();
@@ -44,6 +48,26 @@ export const useDexService = () => {
     isInitialized: false,
   });
 
+  // Individual loading states for each operation
+  const [loadingStates, setLoadingStates] = useState({
+    init: false,
+    buy: false,
+    sell: false,
+    addLiquidity: false,
+    removeLiquidity: false,
+    transfer: false,
+    message: false,
+    refresh: false,
+  });
+
+  const setOperationLoading = (
+    operation: keyof typeof loadingStates,
+    isLoading: boolean
+  ) => {
+    setLoadingStates((prev) => ({ ...prev, [operation]: isLoading }));
+    setLoading(isLoading);
+  };
+
   // Initialize user account
   const initUser = useCallback(async (): Promise<DexServiceResult> => {
     if (!wallet.connected || !wallet.publicKey || !anchorWallet) {
@@ -57,7 +81,7 @@ export const useDexService = () => {
     }
 
     try {
-      setLoading(true);
+      setOperationLoading("init", true);
       setError(null);
 
       const result = await initializeUser(connection, anchorWallet);
@@ -79,7 +103,7 @@ export const useDexService = () => {
         error: errorMessage,
       };
     } finally {
-      setLoading(false);
+      setOperationLoading("init", false);
     }
   }, [connection, wallet, anchorWallet]);
 
@@ -108,7 +132,7 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("buy", true);
         setError(null);
 
         const result = await buySol(connection, anchorWallet, params);
@@ -132,7 +156,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("buy", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -165,7 +189,7 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("sell", true);
         setError(null);
 
         const result = await sellSol(connection, anchorWallet, params);
@@ -189,7 +213,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("sell", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -220,14 +244,10 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("addLiquidity", true);
         setError(null);
 
-        const result = await provideLiquidity(
-          connection,
-          anchorWallet,
-          params
-        );
+        const result = await provideLiquidity(connection, anchorWallet, params);
 
         if (!result.success) {
           setError(result.error || "Failed to provide liquidity");
@@ -248,7 +268,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("addLiquidity", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -279,7 +299,7 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("removeLiquidity", true);
         setError(null);
 
         const result = await withdrawLiquidity(
@@ -307,7 +327,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("removeLiquidity", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -337,7 +357,7 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("transfer", true);
         setError(null);
 
         const result = await transferAsset(connection, anchorWallet, params);
@@ -360,7 +380,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("transfer", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -390,7 +410,7 @@ export const useDexService = () => {
       }
 
       try {
-        setLoading(true);
+        setOperationLoading("message", true);
         setError(null);
 
         const result = await sendMessage(connection, anchorWallet, params);
@@ -410,7 +430,7 @@ export const useDexService = () => {
           error: errorMessage,
         };
       } finally {
-        setLoading(false);
+        setOperationLoading("message", false);
       }
     },
     [connection, wallet, anchorWallet]
@@ -435,10 +455,13 @@ export const useDexService = () => {
   // Refresh functions
   const refreshPoolInfo = useCallback(async () => {
     try {
+      setOperationLoading("refresh", true);
       const info = await getPoolInfo(connection);
       setPoolInfo(info);
     } catch (err) {
       console.error("Error refreshing pool info:", err);
+    } finally {
+      setOperationLoading("refresh", false);
     }
   }, [connection]);
 
@@ -446,10 +469,13 @@ export const useDexService = () => {
     if (!wallet.publicKey) return;
 
     try {
+      setOperationLoading("refresh", true);
       const balance = await getUserBalance(connection, wallet.publicKey);
       setUserBalance(balance);
     } catch (err) {
       console.error("Error refreshing user balance:", err);
+    } finally {
+      setOperationLoading("refresh", false);
     }
   }, [connection, wallet.publicKey]);
 
@@ -457,10 +483,13 @@ export const useDexService = () => {
     if (!wallet.publicKey) return;
 
     try {
+      setOperationLoading("refresh", true);
       const state = await getUserAccountState(connection, wallet.publicKey);
       setAccountState(state);
     } catch (err) {
       console.error("Error refreshing account state:", err);
+    } finally {
+      setOperationLoading("refresh", false);
     }
   }, [connection, wallet.publicKey]);
 
@@ -470,6 +499,10 @@ export const useDexService = () => {
       refreshPoolInfo();
       refreshUserBalance();
       refreshAccountState();
+    } else {
+      setPoolInfo(null);
+      setUserBalance(null);
+      setAccountState({ isInitialized: false });
     }
   }, [
     wallet.connected,
@@ -478,6 +511,9 @@ export const useDexService = () => {
     refreshUserBalance,
     refreshAccountState,
   ]);
+
+  // Check if any operation is loading
+  const isAnyOperationLoading = Object.values(loadingStates).some(Boolean);
 
   return {
     // Operations
@@ -499,8 +535,9 @@ export const useDexService = () => {
     poolInfo,
     userBalance,
     accountState,
-    loading,
+    loading: isAnyOperationLoading,
     error,
+    loadingStates,
 
     // Utility
     clearError: () => setError(null),
@@ -573,6 +610,8 @@ export const useUserBalance = () => {
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
       refreshUserBalance();
+    } else {
+      setUserBalance(null);
     }
   }, [wallet.connected, wallet.publicKey, refreshUserBalance]);
 

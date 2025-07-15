@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/common";
 
 /**
- * Example component showing how to use the DeFi services
+ * Enhanced DeFi component with improved loading states and error handling
  */
 export const DeFi: React.FC = () => {
   const {
@@ -34,6 +34,7 @@ export const DeFi: React.FC = () => {
     accountState,
     loading,
     error,
+    loadingStates, // New: individual loading states
     isWalletConnected,
 
     // Utility
@@ -49,24 +50,29 @@ export const DeFi: React.FC = () => {
   const [targetAddress, setTargetAddress] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
+  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
 
   const handleInitUser = async () => {
     if (!isWalletConnected) {
       setStatus("Please connect your wallet first");
+      setExplorerUrl(null);
       return;
     }
 
     const result = await initUser();
     if (result.success) {
       setStatus("User initialized successfully!");
+      setExplorerUrl(result.explorerUrl || null);
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleBuySOL = async () => {
     if (!swapAmount || parseFloat(swapAmount) <= 0) {
       setStatus("Please enter a valid amount");
+      setExplorerUrl(null);
       return;
     }
 
@@ -77,15 +83,18 @@ export const DeFi: React.FC = () => {
 
     if (result.success) {
       setStatus("SOL purchase successful!");
+      setExplorerUrl(result.explorerUrl || null);
       setSwapAmount("");
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleSellSOL = async () => {
     if (!swapAmount || parseFloat(swapAmount) <= 0) {
       setStatus("Please enter a valid amount");
+      setExplorerUrl(null);
       return;
     }
 
@@ -97,15 +106,18 @@ export const DeFi: React.FC = () => {
 
     if (result.success) {
       setStatus("SOL sale successful!");
+      setExplorerUrl(result.explorerUrl || null);
       setSwapAmount("");
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleAddLiquidity = async () => {
     if (!liquidityAmount || parseFloat(liquidityAmount) <= 0) {
       setStatus("Please enter a valid amount");
+      setExplorerUrl(null);
       return;
     }
 
@@ -116,15 +128,18 @@ export const DeFi: React.FC = () => {
 
     if (result.success) {
       setStatus("Liquidity added successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setLiquidityAmount("");
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleRemoveLiquidity = async () => {
     if (!liquidityAmount || parseFloat(liquidityAmount) <= 0) {
       setStatus("Please enter a valid amount");
+      setExplorerUrl(null);
       return;
     }
 
@@ -135,20 +150,24 @@ export const DeFi: React.FC = () => {
 
     if (result.success) {
       setStatus("Liquidity removed successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setLiquidityAmount("");
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleTransferAssets = async () => {
     if (!transferAmount || parseFloat(transferAmount) <= 0) {
       setStatus("Please enter a valid amount");
+      setExplorerUrl(null);
       return;
     }
 
     if (!targetAddress) {
       setStatus("Please enter a target address");
+      setExplorerUrl(null);
       return;
     }
 
@@ -161,19 +180,23 @@ export const DeFi: React.FC = () => {
 
       if (result.success) {
         setStatus("Assets transferred successfully!");
+        setExplorerUrl(result.explorerUrl || null);
         setTransferAmount("");
         setTargetAddress("");
       } else {
-        console.error(`Error: ${result.error}`);
+        setStatus(`Error: ${result.error}`);
+        setExplorerUrl(null);
       }
     } catch (error) {
-      console.error("Invalid target address");
+      setStatus("Invalid target address");
+      setExplorerUrl(null);
     }
   };
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
       setStatus("Please enter a message");
+      setExplorerUrl(null);
       return;
     }
 
@@ -184,10 +207,18 @@ export const DeFi: React.FC = () => {
 
     if (result.success) {
       setStatus("Message sent successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setMessage("");
     } else {
-      console.error(`Error: ${result.error}`);
+      setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
+  };
+
+  const clearStatus = () => {
+    setStatus("");
+    setExplorerUrl(null);
+    clearError();
   };
 
   if (!isWalletConnected) {
@@ -217,35 +248,60 @@ export const DeFi: React.FC = () => {
         DeFi Interface
       </Text>
 
-      {/* Error Display */}
-      {error && (
-        <Card className="bg-red-50 border-red-200 mb-6">
+      {/* Error/Status Display */}
+      {(error || status) && (
+        <Card
+          className={`mb-6 ${
+            error || status.includes("Error")
+              ? "bg-red-50 border-red-200"
+              : "bg-green-50 border-green-200"
+          }`}
+        >
           <CardContent className="py-4">
-            <div className="flex justify-between items-center">
-              <Text color="error">{error}</Text>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <Text
+                  color={
+                    error || status.includes("Error") ? "error" : "success"
+                  }
+                >
+                  {error || status}
+                </Text>
+                {explorerUrl && (
+                  <div className="mt-2">
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm underline"
+                    >
+                      View Transaction on Explorer
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearError}
-                className="text-red-500 hover:text-red-700 h-auto p-1"
-              >
-                ×
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {status && (
-        <Card className="bg-red-50 border-red-200 mb-6">
-          <CardContent className="py-4">
-            <div className="flex justify-between items-center">
-              <Text color="error">{status}</Text>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearError}
-                className="text-red-500 hover:text-red-700 h-auto p-1"
+                onClick={clearStatus}
+                className={`h-auto p-1 ${
+                  error || status.includes("Error")
+                    ? "text-red-500 hover:text-red-700"
+                    : "text-green-500 hover:text-green-700"
+                }`}
               >
                 ×
               </Button>
@@ -258,7 +314,10 @@ export const DeFi: React.FC = () => {
       {loading && (
         <Card className="bg-blue-50 border-blue-200 mb-6">
           <CardContent className="py-4">
-            <Text color="primary">Processing transaction...</Text>
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <Text color="primary">Processing transaction...</Text>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -271,16 +330,33 @@ export const DeFi: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Text color="secondary" className="mb-4">
-            Initialized: {accountState.isInitialized ? "Yes" : "No"}
-          </Text>
+          <div className="space-y-2 mb-4">
+            <Text color="secondary">
+              Initialized: {accountState.isInitialized ? "Yes" : "No"}
+            </Text>
+            {accountState.userInfo && (
+              <>
+                <Text color="secondary">
+                  Account Name: {accountState.userInfo.accountName || "Not set"}
+                </Text>
+                <Text color="secondary">
+                  Asset Account: {accountState.userInfo.assetAccount}
+                </Text>
+                <Text color="secondary">
+                  K Value: {accountState.userInfo.kValue.toFixed(4)}
+                </Text>
+              </>
+            )}
+          </div>
           {!accountState.isInitialized && (
             <Button
               onClick={handleInitUser}
-              disabled={loading}
+              disabled={loadingStates.init}
               variant="default"
             >
-              Initialize User Account
+              {loadingStates.init
+                ? "Initializing..."
+                : "Initialize User Account"}
             </Button>
           )}
         </CardContent>
@@ -305,6 +381,9 @@ export const DeFi: React.FC = () => {
               <Text color="secondary">
                 LP Token Supply: {poolInfo.lpTokenSupply.toFixed(4)}
               </Text>
+              <Text color="secondary">
+                K Constant: {poolInfo.kConstant.toFixed(4)}
+              </Text>
             </div>
           ) : (
             <Text color="muted" className="mb-4">
@@ -313,10 +392,10 @@ export const DeFi: React.FC = () => {
           )}
           <Button
             onClick={refreshPoolInfo}
-            disabled={loading}
+            disabled={loadingStates.refresh}
             variant="secondary"
           >
-            Refresh Pool Info
+            {loadingStates.refresh ? "Refreshing..." : "Refresh Pool Info"}
           </Button>
         </CardContent>
       </Card>
@@ -348,10 +427,10 @@ export const DeFi: React.FC = () => {
           )}
           <Button
             onClick={refreshUserBalance}
-            disabled={loading}
+            disabled={loadingStates.refresh}
             variant="secondary"
           >
-            Refresh Balance
+            {loadingStates.refresh ? "Refreshing..." : "Refresh Balance"}
           </Button>
         </CardContent>
       </Card>
@@ -385,18 +464,18 @@ export const DeFi: React.FC = () => {
             <div className="flex gap-2">
               <Button
                 onClick={handleBuySOL}
-                disabled={loading || !accountState.isInitialized}
+                disabled={loadingStates.buy || !accountState.isInitialized}
                 className="flex-1 bg-green-500 hover:bg-green-600"
               >
-                Buy SOL
+                {loadingStates.buy ? "Buying..." : "Buy SOL"}
               </Button>
               <Button
                 onClick={handleSellSOL}
-                disabled={loading || !accountState.isInitialized}
+                disabled={loadingStates.sell || !accountState.isInitialized}
                 variant="destructive"
                 className="flex-1"
               >
-                Sell SOL
+                {loadingStates.sell ? "Selling..." : "Sell SOL"}
               </Button>
             </div>
           </div>
@@ -432,18 +511,24 @@ export const DeFi: React.FC = () => {
             <div className="flex gap-2">
               <Button
                 onClick={handleAddLiquidity}
-                disabled={loading || !accountState.isInitialized}
+                disabled={
+                  loadingStates.addLiquidity || !accountState.isInitialized
+                }
                 className="flex-1"
               >
-                Add Liquidity
+                {loadingStates.addLiquidity ? "Adding..." : "Add Liquidity"}
               </Button>
               <Button
                 onClick={handleRemoveLiquidity}
-                disabled={loading || !accountState.isInitialized}
+                disabled={
+                  loadingStates.removeLiquidity || !accountState.isInitialized
+                }
                 variant="secondary"
                 className="flex-1"
               >
-                Remove Liquidity
+                {loadingStates.removeLiquidity
+                  ? "Removing..."
+                  : "Remove Liquidity"}
               </Button>
             </div>
           </div>
@@ -495,10 +580,10 @@ export const DeFi: React.FC = () => {
             </div>
             <Button
               onClick={handleTransferAssets}
-              disabled={loading || !accountState.isInitialized}
+              disabled={loadingStates.transfer || !accountState.isInitialized}
               className="w-full bg-purple-500 hover:bg-purple-600"
             >
-              Transfer Assets
+              {loadingStates.transfer ? "Transferring..." : "Transfer Assets"}
             </Button>
           </div>
         </CardContent>
@@ -549,10 +634,10 @@ export const DeFi: React.FC = () => {
             </div>
             <Button
               onClick={handleSendMessage}
-              disabled={loading || !accountState.isInitialized}
+              disabled={loadingStates.message || !accountState.isInitialized}
               className="w-full bg-green-500 hover:bg-green-600"
             >
-              Send Message
+              {loadingStates.message ? "Sending..." : "Send Message"}
             </Button>
           </div>
         </CardContent>

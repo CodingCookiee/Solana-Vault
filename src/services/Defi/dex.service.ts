@@ -1,18 +1,12 @@
 import {
   Connection,
   PublicKey,
-  Transaction,
-  TransactionInstruction,
   SystemProgram,
-  SYSVAR_RENT_PUBKEY,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { Program, AnchorProvider, web3, BN, Idl } from "@coral-xyz/anchor";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { web3, BN } from "@coral-xyz/anchor";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
 import {
   PROGRAM_ID,
@@ -27,54 +21,61 @@ import {
   UserInfor,
   UserTarget,
   AccountState,
+  ValidationResult,
 } from "./dex.types";
-
-// Import IDL directly as JSON and cast to Idl
-import dexIdlJson from "./dex.idl.json";
-const dexIdl = dexIdlJson as unknown as Idl;
+import {
+  getDexAnchorProgram,
+  getReadOnlyDexProgram,
+  deriveDexPDAs,
+  checkUserInitialized,
+  toBN,
+  fromBN,
+} from "./dex.anchor";
 
 /**
- * Initialize user account
+ * Initialize user account using Anchor
  */
 export const initializeUser = async (
   connection: Connection,
   wallet: AnchorWallet
 ): Promise<DexServiceResult> => {
   try {
+    console.log("Starting user initialization...");
+
     if (!wallet.publicKey) {
       throw new Error("Wallet not connected");
     }
 
-    // Create provider and program
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
+    console.log("Wallet public key:", wallet.publicKey.toString());
 
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
-
-    // Get the client account PDA
-    const [clientPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
+    // Check if user is already initialized
+    const isInitialized = await checkUserInitialized(
+      connection,
+      wallet.publicKey
     );
-
-    // Check if account exists by trying to get account info directly
-    try {
-      const accountInfo = await connection.getAccountInfo(clientPDA);
-      if (accountInfo !== null) {
-        return {
-          signature: "",
-          success: false,
-          error: "Account already initialized",
-        };
-      }
-    } catch (error) {
-      console.log("Account doesn't exist yet, proceeding with initialization");
+    if (isInitialized) {
+      return {
+        signature: "",
+        success: false,
+        error: "Account already initialized",
+      };
     }
 
-    // Initialize the user account
-    const tx = await program.methods
+    console.log("Creating Anchor program...");
+
+    // Get Anchor program instance
+    const program = getDexAnchorProgram(connection, wallet);
+
+    console.log("Program created successfully");
+
+    // Derive client PDA
+    const [clientPDA] = deriveDexPDAs.client(wallet.publicKey);
+
+    console.log("Client PDA:", clientPDA.toString());
+
+    // Call the initUser RPC method
+    console.log("Calling initUser method...");
+    const txn = await program.methods
       .initUser()
       .accounts({
         client: clientPDA,
@@ -83,12 +84,15 @@ export const initializeUser = async (
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    console.log("Transaction signature:", txn);
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
+      pda: clientPDA.toString(),
     };
   } catch (error) {
     console.error("Error initializing user:", error);
@@ -109,45 +113,30 @@ export const buySol = async (
   params: SwapParams
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sol_vault")],
-      PROGRAM_ID
-    );
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
+    const [userPDA] = deriveDexPDAs.client(wallet.publicKey!);
 
-    const [sfcVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sfc_vault")],
-      PROGRAM_ID
-    );
+    const amountIn = toBN(params.amountIn);
 
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const amountIn = new BN(params.amountIn * LAMPORTS_PER_SOL);
-
-    const tx = await program.methods
+    const txn = await program.methods
       .buySol(amountIn)
       .accounts({
         vaultsol: solVault,
         vaultsfc: sfcVault,
         donator: userPDA,
-        signer: wallet.publicKey,
+        signer: wallet.publicKey!,
         token: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -170,46 +159,31 @@ export const sellSol = async (
   params: SwapParams & { bump: number }
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sol_vault")],
-      PROGRAM_ID
-    );
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
+    const [userPDA] = deriveDexPDAs.client(wallet.publicKey!);
 
-    const [sfcVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sfc_vault")],
-      PROGRAM_ID
-    );
-
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const amountIn = new BN(params.amountIn * LAMPORTS_PER_SOL);
+    const amountIn = toBN(params.amountIn);
     const bump = new BN(params.bump);
 
-    const tx = await program.methods
+    const txn = await program.methods
       .sellSol(amountIn, bump)
       .accounts({
         vaultsol: solVault,
         vaultsfc: sfcVault,
         donator: userPDA,
-        signer: wallet.publicKey,
+        signer: wallet.publicKey!,
         token: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -232,41 +206,18 @@ export const provideLiquidity = async (
   params: LiquidityParams
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sol_vault")],
-      PROGRAM_ID
-    );
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
+    const [mint] = deriveDexPDAs.lpMint();
+    const [userSfcAccount] = deriveDexPDAs.userSfcAccount(wallet.publicKey!);
+    const [userLpAccount] = deriveDexPDAs.userLpAccount(wallet.publicKey!);
 
-    const [sfcVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sfc_vault")],
-      PROGRAM_ID
-    );
-
-    const [mint] = PublicKey.findProgramAddressSync(
-      [Buffer.from("lp_mint")],
-      PROGRAM_ID
-    );
-
-    const [userSfcAccount] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_sfc"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const [userLpAccount] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_lp"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const amount = new BN(params.amount * LAMPORTS_PER_SOL);
+    const amount = toBN(params.amount);
     const bump = new BN(params.bump);
 
-    const tx = await program.methods
+    const txn = await program.methods
       .provideLiquidity(amount, bump)
       .accounts({
         vaultsol: solVault,
@@ -275,15 +226,15 @@ export const provideLiquidity = async (
         donatorsfc: userSfcAccount,
         donatorlp: userLpAccount,
         token: TOKEN_PROGRAM_ID,
-        signer: wallet.publicKey,
+        signer: wallet.publicKey!,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -306,41 +257,18 @@ export const withdrawLiquidity = async (
   params: LiquidityParams
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sol_vault")],
-      PROGRAM_ID
-    );
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
+    const [mint] = deriveDexPDAs.lpMint();
+    const [userSfcAccount] = deriveDexPDAs.userSfcAccount(wallet.publicKey!);
+    const [userLpAccount] = deriveDexPDAs.userLpAccount(wallet.publicKey!);
 
-    const [sfcVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sfc_vault")],
-      PROGRAM_ID
-    );
-
-    const [mint] = PublicKey.findProgramAddressSync(
-      [Buffer.from("lp_mint")],
-      PROGRAM_ID
-    );
-
-    const [userSfcAccount] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_sfc"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const [userLpAccount] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_lp"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
-
-    const amount = new BN(params.amount * LAMPORTS_PER_SOL);
+    const amount = toBN(params.amount);
     const bump = new BN(params.bump);
 
-    const tx = await program.methods
+    const txn = await program.methods
       .withdrawLiquidity(amount, bump)
       .accounts({
         vaultsol: solVault,
@@ -349,15 +277,15 @@ export const withdrawLiquidity = async (
         donatorsfc: userSfcAccount,
         donatorlp: userLpAccount,
         token: TOKEN_PROGRAM_ID,
-        signer: wallet.publicKey,
+        signer: wallet.publicKey!,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -380,37 +308,26 @@ export const transferAsset = async (
   params: AssetTransferParams
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [fromUserPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
+    const [fromUserPDA] = deriveDexPDAs.client(wallet.publicKey!);
+    const [toUserPDA] = deriveDexPDAs.client(params.flashTarget);
 
-    const [toUserPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), params.flashTarget.toBuffer()],
-      PROGRAM_ID
-    );
+    const amount = toBN(params.amount);
 
-    const amount = new BN(params.amount * LAMPORTS_PER_SOL);
-
-    const tx = await program.methods
+    const txn = await program.methods
       .tranferAsset(params.flashTarget, amount)
       .accounts({
         toclient: toUserPDA,
         fromclient: fromUserPDA,
-        signer: wallet.publicKey,
+        signer: wallet.publicKey!,
       })
       .rpc();
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -433,51 +350,41 @@ export const sendMessage = async (
   params: MessageParams
 ): Promise<DexServiceResult> => {
   try {
-    const provider = new AnchorProvider(connection, wallet, {
-      commitment: "confirmed",
-      preflightCommitment: "confirmed",
-    });
-    const program = new Program(dexIdl, PROGRAM_ID, provider);
+    const program = getDexAnchorProgram(connection, wallet);
 
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
-    );
+    const [userPDA] = deriveDexPDAs.client(wallet.publicKey!);
 
-    let tx: string;
+    let txn: string;
 
     if (params.flashTarget) {
       // Send message to specific target
-      const [targetPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("client"), params.flashTarget.toBuffer()],
-        PROGRAM_ID
-      );
+      const [targetPDA] = deriveDexPDAs.client(params.flashTarget);
 
-      tx = await program.methods
+      txn = await program.methods
         .userMessageTarget(params.flashTarget, params.message)
         .accounts({
           toclient: targetPDA,
           fromclient: userPDA,
-          signer: wallet.publicKey,
+          signer: wallet.publicKey!,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
     } else {
       // Send general message
-      tx = await program.methods
+      txn = await program.methods
         .userMessage(params.message)
         .accounts({
           client: userPDA,
-          signer: wallet.publicKey,
+          signer: wallet.publicKey!,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
     }
 
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${tx}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature: tx,
+      signature: txn,
       success: true,
       explorerUrl,
     };
@@ -498,15 +405,8 @@ export const getPoolInfo = async (
   connection: Connection
 ): Promise<PoolInfo | null> => {
   try {
-    const [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sol_vault")],
-      PROGRAM_ID
-    );
-
-    const [sfcVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("sfc_vault")],
-      PROGRAM_ID
-    );
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
 
     const solBalance = await connection.getBalance(solVault);
     const sfcAccountInfo = await connection.getAccountInfo(sfcVault);
@@ -514,7 +414,7 @@ export const getPoolInfo = async (
     return {
       solVault,
       sfcVault,
-      solBalance: solBalance / LAMPORTS_PER_SOL,
+      solBalance: fromBN(new BN(solBalance)),
       sfcBalance: sfcAccountInfo ? 0 : 0, // Would need to parse token account
       lpTokenSupply: 0, // Would need to fetch from mint
       kConstant: 0, // Would calculate from balances
@@ -533,16 +433,13 @@ export const getUserBalance = async (
   userPublicKey: PublicKey
 ): Promise<UserBalance | null> => {
   try {
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), userPublicKey.toBuffer()],
-      PROGRAM_ID
-    );
+    const [userPDA] = deriveDexPDAs.client(userPublicKey);
 
     const solBalance = await connection.getBalance(userPublicKey);
     const accountInfo = await connection.getAccountInfo(userPDA);
 
     return {
-      sol: solBalance / LAMPORTS_PER_SOL,
+      sol: fromBN(new BN(solBalance)),
       sfc: 0, // Would need to parse from account data
       lpTokens: 0, // Would need to parse from account data
     };
@@ -606,17 +503,33 @@ export const getUserAccountState = async (
   userPublicKey: PublicKey
 ): Promise<AccountState> => {
   try {
-    const [userPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("client"), userPublicKey.toBuffer()],
-      PROGRAM_ID
-    );
+    const [userPDA] = deriveDexPDAs.client(userPublicKey);
 
     const accountInfo = await connection.getAccountInfo(userPDA);
+    const isInitialized = accountInfo !== null;
+
+    let userInfo: UserInfor | undefined;
+    let userTargets: UserTarget | undefined;
+
+    if (isInitialized) {
+      try {
+        const program = getReadOnlyDexProgram(connection, userPublicKey);
+        const userAccount = await program.account.userInfor.fetch(userPDA);
+
+        userInfo = {
+          assetAccount: userAccount.assetAccount.toNumber(),
+          accountName: userAccount.accountName,
+          kValue: userAccount.kValue,
+        };
+      } catch (error) {
+        console.log("Could not fetch user account data:", error);
+      }
+    }
 
     return {
-      isInitialized: accountInfo !== null,
-      userInfo: undefined, // Would need to deserialize from account data
-      userTargets: undefined, // Would need to deserialize from account data
+      isInitialized,
+      userInfo,
+      userTargets,
     };
   } catch (error) {
     console.error("Error getting user account state:", error);
@@ -629,9 +542,7 @@ export const getUserAccountState = async (
 /**
  * Validate transaction parameters
  */
-export const validateSwapParams = (
-  params: SwapParams
-): { valid: boolean; error?: string } => {
+export const validateSwapParams = (params: SwapParams): ValidationResult => {
   if (params.amountIn <= 0) {
     return { valid: false, error: "Amount must be greater than 0" };
   }
@@ -645,7 +556,7 @@ export const validateSwapParams = (
 
 export const validateLiquidityParams = (
   params: LiquidityParams
-): { valid: boolean; error?: string } => {
+): ValidationResult => {
   if (params.amount <= 0) {
     return { valid: false, error: "Amount must be greater than 0" };
   }
@@ -655,4 +566,154 @@ export const validateLiquidityParams = (
   }
 
   return { valid: true };
+};
+
+/**
+ * Validate message parameters
+ */
+export const validateMessageParams = (
+  params: MessageParams
+): ValidationResult => {
+  if (!params.message || !params.message.trim()) {
+    return { valid: false, error: "Message cannot be empty" };
+  }
+
+  if (params.message.length > 280) {
+    return { valid: false, error: "Message must be 280 characters or less" };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate transfer parameters
+ */
+export const validateTransferParams = (
+  params: AssetTransferParams
+): ValidationResult => {
+  if (params.amount <= 0) {
+    return { valid: false, error: "Amount must be greater than 0" };
+  }
+
+  if (!params.flashTarget) {
+    return { valid: false, error: "Target address is required" };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Helper function to check if program is deployed
+ */
+export const isProgramDeployed = async (
+  connection: Connection
+): Promise<boolean> => {
+  try {
+    const programAccount = await connection.getAccountInfo(PROGRAM_ID);
+    return programAccount !== null && programAccount.executable;
+  } catch (error) {
+    console.error("Error checking program deployment:", error);
+    return false;
+  }
+};
+
+/**
+ * Helper function to get program info
+ */
+export const getProgramInfo = async (connection: Connection) => {
+  try {
+    const programAccount = await connection.getAccountInfo(PROGRAM_ID);
+    return {
+      exists: programAccount !== null,
+      executable: programAccount?.executable || false,
+      owner: programAccount?.owner.toString(),
+      lamports: programAccount?.lamports || 0,
+    };
+  } catch (error) {
+    console.error("Error getting program info:", error);
+    return null;
+  }
+};
+
+/**
+ * Change user account name
+ */
+export const changeName = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  name: string
+): Promise<DexServiceResult> => {
+  try {
+    if (!name || !name.trim()) {
+      return {
+        signature: "",
+        success: false,
+        error: "Name cannot be empty",
+      };
+    }
+
+    const program = getDexAnchorProgram(connection, wallet);
+    const [clientPDA] = deriveDexPDAs.client(wallet.publicKey!);
+
+    const txn = await program.methods
+      .changeName(name)
+      .accounts({
+        client: clientPDA,
+        signer: wallet.publicKey!,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error changing name:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Clear user account
+ */
+export const clearUser = async (
+  connection: Connection,
+  wallet: AnchorWallet
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    const [clientPDA] = deriveDexPDAs.client(wallet.publicKey!);
+
+    const txn = await program.methods
+      .clearUser()
+      .accounts({
+        client: clientPDA,
+        signer: wallet.publicKey!,
+        solDestination: wallet.publicKey!,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error clearing user:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 };

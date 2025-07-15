@@ -1,12 +1,68 @@
 import { PublicKey } from "@solana/web3.js";
-import { SOLANA_PROGRAMS } from "../index";
+import { Idl } from "@coral-xyz/anchor";
 
 /**
- * DeFi/DEX Program Types
+ * DeFi/DEX Program Types with Anchor Support
  */
 
-// Program constants
-export const PROGRAM_ID = SOLANA_PROGRAMS.DEX;
+// Program constants - use the actual program ID from your IDL
+export const PROGRAM_ID = new PublicKey("F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX");
+
+// Anchor Program Type Definition
+export type SfcvndProgram = {
+  version: "0.1.0";
+  name: "sfcvnd";
+  address: "F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX";
+  instructions: [
+    {
+      name: "initUser";
+      accounts: [
+        {
+          name: "client";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "signer";
+          isMut: true;
+          isSigner: true;
+        },
+        {
+          name: "systemProgram";
+          isMut: false;
+          isSigner: false;
+        }
+      ];
+      args: [];
+    }
+  ];
+  accounts: [
+    {
+      name: "UserInfor";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "assetAccount";
+            type: "u64";
+          },
+          {
+            name: "accountName";
+            type: "string";
+          },
+          {
+            name: "kValue";
+            type: "f64";
+          }
+        ];
+      };
+    }
+  ];
+};
+
+// IDL for Anchor Program (imported from JSON file)
+import idlJson from "./dex.idl.json";
+export const DEX_IDL: Idl = idlJson as Idl;
 
 // Account types from IDL
 export interface UserInfor {
@@ -106,4 +162,11 @@ export interface AccountState {
 
 export interface DexServiceResult extends DexTransactionResult {
   data?: any;
+  pda?: string;
+}
+
+// Validation result
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
 }
