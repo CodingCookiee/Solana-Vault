@@ -1,12 +1,11 @@
 import { PublicKey } from "@solana/web3.js";
-import { SOLANA_PROGRAMS } from "../solana/constants";
 
 /**
  * CRUD Program Types
  */
 
-// Program constants
-export const PROGRAM_ID = SOLANA_PROGRAMS.CRUD;
+// Program constants - use the address from your IDL
+export const PROGRAM_ID = new PublicKey("3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC");
 
 // Account types from IDL
 export interface CrudEntryState {
