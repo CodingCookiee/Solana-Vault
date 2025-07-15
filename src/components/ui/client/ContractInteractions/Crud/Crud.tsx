@@ -39,60 +39,97 @@ export const Crud: React.FC = () => {
   const [deleteTitle, setDeleteTitle] = useState("");
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+
+  // Individual loading states for each operation
+  const [loadingStates, setLoadingStates] = useState({
+    create: false,
+    update: false,
+    delete: false,
+    refresh: false,
+  });
+
+  const setOperationLoading = (
+    operation: keyof typeof loadingStates,
+    isLoading: boolean
+  ) => {
+    setLoadingStates((prev) => ({ ...prev, [operation]: isLoading }));
+  };
 
   const handleCreate = async () => {
     if (!createForm.title.trim() || !createForm.message.trim()) {
       setStatus("Please fill in both title and message");
+      setExplorerUrl(null);
       return;
     }
 
+    setOperationLoading("create", true);
     const result = await createEntry({
       title: createForm.title,
       message: createForm.message,
     });
+    setOperationLoading("create", false);
 
     if (result.success) {
       setStatus("Entry created successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setCreateForm({ title: "", message: "" });
     } else {
       setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleUpdate = async () => {
     if (!updateForm.title.trim() || !updateForm.message.trim()) {
       setStatus("Please fill in both title and message");
+      setExplorerUrl(null);
       return;
     }
 
+    setOperationLoading("update", true);
     const result = await updateEntry({
       title: updateForm.title,
       message: updateForm.message,
     });
+    setOperationLoading("update", false);
 
     if (result.success) {
       setStatus("Entry updated successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setUpdateForm({ title: "", message: "" });
       setSelectedEntry(null);
     } else {
       setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
   };
 
   const handleDelete = async () => {
     if (!deleteTitle.trim()) {
       setStatus("Please enter a title to delete");
+      setExplorerUrl(null);
       return;
     }
 
+    setOperationLoading("delete", true);
     const result = await deleteEntry({ title: deleteTitle });
+    setOperationLoading("delete", false);
 
     if (result.success) {
       setStatus("Entry deleted successfully!");
+      setExplorerUrl(result.explorerUrl || null);
       setDeleteTitle("");
     } else {
       setStatus(`Error: ${result.error}`);
+      setExplorerUrl(null);
     }
+  };
+
+  const handleRefresh = async () => {
+    setOperationLoading("refresh", true);
+    await refreshEntries();
+    setOperationLoading("refresh", false);
   };
 
   const handleEditEntry = (entry: any) => {
@@ -102,8 +139,12 @@ export const Crud: React.FC = () => {
 
   const clearStatus = () => {
     setStatus("");
+    setExplorerUrl(null);
     clearError();
   };
+
+  // Check if any operation is loading
+  const isAnyOperationLoading = Object.values(loadingStates).some(Boolean);
 
   if (!isWalletConnected) {
     return (
@@ -134,15 +175,58 @@ export const Crud: React.FC = () => {
 
       {/* Error/Status Display */}
       {(error || status) && (
-        <Card className="bg-red-50 border-red-200 mb-6">
+        <Card
+          className={`mb-6 ${
+            error || status.includes("Error")
+              ? "bg-red-50 border-red-200"
+              : "bg-green-50 border-green-200"
+          }`}
+        >
           <CardContent className="py-4">
-            <div className="flex justify-between items-center">
-              <Text color="error">{error || status}</Text>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <Text
+                  color={
+                    error || status.includes("Error") ? "error" : "success"
+                  }
+                >
+                  {error || status}
+                </Text>
+                {explorerUrl && (
+                  <div className="mt-2">
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm underline"
+                    >
+                      View Transaction on Explorer
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={clearStatus}
-                className="text-red-500 hover:text-red-700 h-auto p-1"
+                className={`h-auto p-1 ${
+                  error || status.includes("Error")
+                    ? "text-red-500 hover:text-red-700"
+                    : "text-green-500 hover:text-green-700"
+                }`}
               >
                 ×
               </Button>
@@ -152,10 +236,13 @@ export const Crud: React.FC = () => {
       )}
 
       {/* Loading Indicator */}
-      {loading && (
+      {(loading || isAnyOperationLoading) && (
         <Card className="bg-blue-50 border-blue-200 mb-6">
           <CardContent className="py-4">
-            <Text color="primary">Processing...</Text>
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <Text color="primary">Processing transaction...</Text>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -220,10 +307,10 @@ export const Crud: React.FC = () => {
                 </div>
                 <Button
                   onClick={handleCreate}
-                  disabled={loading}
+                  disabled={loadingStates.create}
                   className="w-full bg-green-500 hover:bg-green-600"
                 >
-                  Create Entry
+                  {loadingStates.create ? "Creating..." : "Create Entry"}
                 </Button>
               </div>
             </CardContent>
@@ -292,10 +379,10 @@ export const Crud: React.FC = () => {
                 <div className="flex gap-2">
                   <Button
                     onClick={handleUpdate}
-                    disabled={loading}
+                    disabled={loadingStates.update}
                     className="flex-1 bg-blue-500 hover:bg-blue-600"
                   >
-                    Update Entry
+                    {loadingStates.update ? "Updating..." : "Update Entry"}
                   </Button>
                   {selectedEntry && (
                     <Button
@@ -303,7 +390,7 @@ export const Crud: React.FC = () => {
                         setSelectedEntry(null);
                         setUpdateForm({ title: "", message: "" });
                       }}
-                      disabled={loading}
+                      disabled={loadingStates.update}
                       variant="secondary"
                       className="flex-1"
                     >
@@ -344,11 +431,11 @@ export const Crud: React.FC = () => {
                 </div>
                 <Button
                   onClick={handleDelete}
-                  disabled={loading}
+                  disabled={loadingStates.delete}
                   variant="destructive"
                   className="w-full"
                 >
-                  Delete Entry
+                  {loadingStates.delete ? "Deleting..." : "Delete Entry"}
                 </Button>
               </div>
             </CardContent>
@@ -372,12 +459,12 @@ export const Crud: React.FC = () => {
             <CardContent>
               <div className="mb-4">
                 <Button
-                  onClick={refreshEntries}
-                  disabled={loading}
+                  onClick={handleRefresh}
+                  disabled={loadingStates.refresh}
                   variant="secondary"
                   className="w-full"
                 >
-                  Refresh Entries
+                  {loadingStates.refresh ? "Refreshing..." : "Refresh Entries"}
                 </Button>
               </div>
 
@@ -401,7 +488,7 @@ export const Crud: React.FC = () => {
                             <div className="flex gap-1">
                               <Button
                                 onClick={() => handleEditEntry(entry)}
-                                disabled={loading}
+                                disabled={isAnyOperationLoading}
                                 size="sm"
                                 variant="outline"
                                 className="text-xs"
@@ -410,7 +497,7 @@ export const Crud: React.FC = () => {
                               </Button>
                               <Button
                                 onClick={() => setDeleteTitle(entry.title)}
-                                disabled={loading}
+                                disabled={isAnyOperationLoading}
                                 size="sm"
                                 variant="destructive"
                                 className="text-xs"
