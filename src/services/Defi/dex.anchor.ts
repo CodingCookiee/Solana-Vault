@@ -2,7 +2,13 @@ import { Program, AnchorProvider, web3, BN, Idl } from "@coral-xyz/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { PROGRAM_ID, DEX_IDL } from "./dex.types";
+import { PROGRAM_ID } from "./dex.types";
+
+// Import the IDL directly
+import dexIdlJson from "./dex.idl.json";
+
+// Type the IDL properly
+const DEX_IDL = dexIdlJson as Idl;
 
 /**
  * Get Anchor Program instance for DeFi operations
@@ -141,19 +147,20 @@ export const deriveDexPDAs = {
 };
 
 /**
- * Check if user account is initialized
+ * Check if user account is initialized - simplified version
  */
 export const checkUserInitialized = async (
   connection: Connection,
   userPublicKey: PublicKey
 ): Promise<boolean> => {
   try {
-    const program = getReadOnlyDexProgram(connection, userPublicKey);
     const [clientPDA] = deriveDexPDAs.client(userPublicKey);
-
-    await program.account.userInfor.fetch(clientPDA);
-    return true;
+    
+    // Just check if the account exists, don't try to deserialize with Anchor
+    const accountInfo = await connection.getAccountInfo(clientPDA);
+    return accountInfo !== null;
   } catch (error) {
+    console.error("Error checking user initialization:", error);
     return false;
   }
 };
@@ -173,21 +180,37 @@ export const fromBN = (bn: BN, decimals: number = 9): number => {
 };
 
 /**
- * Get user account info using Anchor
+ * Get user account info using Anchor - with error handling
  */
 export const getUserAccountInfo = async (
   connection: Connection,
   userPublicKey: PublicKey
 ) => {
   try {
-    const program = getReadOnlyDexProgram(connection, userPublicKey);
     const [clientPDA] = deriveDexPDAs.client(userPublicKey);
+    
+    // First check if account exists
+    const accountInfo = await connection.getAccountInfo(clientPDA);
+    if (!accountInfo) {
+      return null;
+    }
 
-    const userAccount = await program.account.userInfor.fetch(clientPDA);
-    return {
-      pda: clientPDA,
-      account: userAccount,
-    };
+    // Try to fetch with Anchor, but handle errors gracefully
+    try {
+      const program = getReadOnlyDexProgram(connection, userPublicKey);
+      const userAccount = await program.account.userInfor.fetch(clientPDA);
+      
+      return {
+        pda: clientPDA,
+        account: userAccount,
+      };
+    } catch (anchorError) {
+      console.log("Could not fetch account with Anchor, account exists but may not be properly formatted:", anchorError);
+      return {
+        pda: clientPDA,
+        account: null,
+      };
+    }
   } catch (error) {
     console.error("Error fetching user account info:", error);
     return null;

@@ -48,17 +48,21 @@ export const initializeUser = async (
 
     console.log("Wallet public key:", wallet.publicKey.toString());
 
-    // Check if user is already initialized
-    const isInitialized = await checkUserInitialized(
-      connection,
-      wallet.publicKey
-    );
-    if (isInitialized) {
-      return {
-        signature: "",
-        success: false,
-        error: "Account already initialized",
-      };
+    // Check if user is already initialized - simplified check
+    try {
+      const isInitialized = await checkUserInitialized(
+        connection,
+        wallet.publicKey
+      );
+      if (isInitialized) {
+        return {
+          signature: "",
+          success: false,
+          error: "Account already initialized",
+        };
+      }
+    } catch (checkError) {
+      console.log("Could not check initialization status, proceeding with initialization:", checkError);
     }
 
     console.log("Creating Anchor program...");
@@ -513,16 +517,18 @@ export const getUserAccountState = async (
 
     if (isInitialized) {
       try {
+        // Try to fetch account data with Anchor, but handle errors gracefully
         const program = getReadOnlyDexProgram(connection, userPublicKey);
         const userAccount = await program.account.userInfor.fetch(userPDA);
-
+        
         userInfo = {
           assetAccount: userAccount.assetAccount.toNumber(),
           accountName: userAccount.accountName,
           kValue: userAccount.kValue,
         };
       } catch (error) {
-        console.log("Could not fetch user account data:", error);
+        console.log("Could not fetch user account data with Anchor:", error);
+        // Account exists but we can't deserialize it properly
       }
     }
 
@@ -542,7 +548,9 @@ export const getUserAccountState = async (
 /**
  * Validate transaction parameters
  */
-export const validateSwapParams = (params: SwapParams): ValidationResult => {
+export const validateSwapParams = (
+  params: SwapParams
+): ValidationResult => {
   if (params.amountIn <= 0) {
     return { valid: false, error: "Amount must be greater than 0" };
   }
@@ -715,5 +723,414 @@ export const clearUser = async (
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
+  }
+};
+
+/**
+ * Deposit asset to user account
+ */
+export const depositAsset = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  params: AssetTransferParams
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    const [clientPDA] = deriveDexPDAs.client(wallet.publicKey!);
+
+    const amount = toBN(params.amount);
+
+    const txn = await program.methods
+      .depositAsset(params.flashTarget, amount)
+      .accounts({
+        client: clientPDA,
+        signer: wallet.publicKey!,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error depositing asset:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Withdraw asset from user account
+ */
+export const withdrawAsset = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  params: AssetTransferParams
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    const [clientPDA] = deriveDexPDAs.client(wallet.publicKey!);
+
+    const amount = toBN(params.amount);
+
+    const txn = await program.methods
+      .withdrawAsset(params.flashTarget, amount)
+      .accounts({
+        client: clientPDA,
+        signer: wallet.publicKey!,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error withdrawing asset:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Transfer SOL to another user
+ */
+export const transferSol = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  targetPublicKey: PublicKey,
+  amount: number
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+
+    const amountLamports = toBN(amount);
+
+    const txn = await program.methods
+      .tranferSol(amountLamports)
+      .accounts({
+        target: targetPublicKey,
+        signer: wallet.publicKey!,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error transferring SOL:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Change name for target user (admin function)
+ */
+export const changeNameTarget = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  targetPublicKey: PublicKey,
+  name: string
+): Promise<DexServiceResult> => {
+  try {
+    if (!name || !name.trim()) {
+      return {
+        signature: "",
+        success: false,
+        error: "Name cannot be empty",
+      };
+    }
+
+    const program = getDexAnchorProgram(connection, wallet);
+    const [clientPDA] = deriveDexPDAs.client(targetPublicKey);
+
+    const txn = await program.methods
+      .changeNameTarget(targetPublicKey, name)
+      .accounts({
+        client: clientPDA,
+        signer: wallet.publicKey!,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error changing target name:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Lock target user (admin function)
+ */
+export const lockTarget = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  targetPublicKey: PublicKey
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    const [targetPDA] = deriveDexPDAs.client(targetPublicKey);
+
+    const txn = await program.methods
+      .lockTarget(targetPublicKey)
+      .accounts({
+        target: targetPDA,
+        signer: wallet.publicKey!,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error locking target:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Tribute asset to vault
+ */
+export const tributeAsset = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  amount: number,
+  bump: number
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    
+    // These would need to be derived based on your program's specific vault structure
+    const [vault] = deriveDexPDAs.sfcVault(); // or appropriate vault
+    const [donator] = deriveDexPDAs.client(wallet.publicKey!);
+    const [mint] = deriveDexPDAs.lpMint(); // or appropriate mint
+    
+    // You'll need to derive the token account and authority PDAs
+    // This is a placeholder - adjust based on your program structure
+    const [tk] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token_account")],
+      PROGRAM_ID
+    );
+    
+    const [authority] = PublicKey.findProgramAddressSync(
+      [Buffer.from("authority")],
+      PROGRAM_ID
+    );
+
+    const amountBN = toBN(amount);
+    const bumpBN = new BN(bump);
+
+    const txn = await program.methods
+      .tributeAsset(amountBN, bumpBN)
+      .accounts({
+        vault: vault,
+        donator: donator,
+        signer: wallet.publicKey!,
+        mint: mint,
+        tk: tk,
+        authority: authority,
+        token: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error tributing asset:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Summon asset from vault
+ */
+export const summonAsset = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  amount: number
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+    
+    // These would need to be derived based on your program's specific vault structure
+    const [vault] = deriveDexPDAs.sfcVault(); // or appropriate vault
+    const [donator] = deriveDexPDAs.client(wallet.publicKey!);
+    const [mint] = deriveDexPDAs.lpMint(); // or appropriate mint
+    
+    // You'll need to derive the token account PDA
+    // This is a placeholder - adjust based on your program structure
+    const [tk] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token_account")],
+      PROGRAM_ID
+    );
+
+    const amountBN = toBN(amount);
+
+    const txn = await program.methods
+      .summonAsset(amountBN)
+      .accounts({
+        vault: vault,
+        donator: donator,
+        signer: wallet.publicKey!,
+        mint: mint,
+        tk: tk,
+        token: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error summoning asset:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Transfer token between accounts
+ */
+export const transferToken = async (
+  connection: Connection,
+  wallet: AnchorWallet,
+  fromTokenAccount: PublicKey,
+  toTokenAccount: PublicKey,
+  amount: number,
+  choose: boolean
+): Promise<DexServiceResult> => {
+  try {
+    const program = getDexAnchorProgram(connection, wallet);
+
+    const amountBN = toBN(amount);
+
+    const txn = await program.methods
+      .tranferToken(amountBN, choose)
+      .accounts({
+        fromtoken: fromTokenAccount,
+        totoken: toTokenAccount,
+        token: TOKEN_PROGRAM_ID,
+        signer: wallet.publicKey!,
+      })
+      .rpc();
+
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
+
+    return {
+      signature: txn,
+      success: true,
+      explorerUrl,
+    };
+  } catch (error) {
+    console.error("Error transferring token:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Get detailed account information for debugging
+ */
+export const getAccountDetails = async (
+  connection: Connection,
+  userPublicKey: PublicKey
+) => {
+  try {
+    const [clientPDA] = deriveDexPDAs.client(userPublicKey);
+    const [solVault] = deriveDexPDAs.solVault();
+    const [sfcVault] = deriveDexPDAs.sfcVault();
+
+    const [clientInfo, solVaultInfo, sfcVaultInfo] = await Promise.all([
+      connection.getAccountInfo(clientPDA),
+      connection.getAccountInfo(solVault),
+      connection.getAccountInfo(sfcVault),
+    ]);
+
+    return {
+      client: {
+        pda: clientPDA.toString(),
+        exists: clientInfo !== null,
+        owner: clientInfo?.owner.toString(),
+        lamports: clientInfo?.lamports,
+        dataLength: clientInfo?.data.length,
+      },
+      solVault: {
+        pda: solVault.toString(),
+        exists: solVaultInfo !== null,
+        owner: solVaultInfo?.owner.toString(),
+        lamports: solVaultInfo?.lamports,
+        dataLength: solVaultInfo?.data.length,
+      },
+      sfcVault: {
+        pda: sfcVault.toString(),
+        exists: sfcVaultInfo !== null,
+        owner: sfcVaultInfo?.owner.toString(),
+        lamports: sfcVaultInfo?.lamports,
+        dataLength: sfcVaultInfo?.data.length,
+      },
+    };
+  } catch (error) {
+    console.error("Error getting account details:", error);
+    return null;
   }
 };
