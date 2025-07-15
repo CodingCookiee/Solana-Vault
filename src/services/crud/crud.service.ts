@@ -1,60 +1,20 @@
-import {
-  Connection,
-  PublicKey,
-  SystemProgram,
-  TransactionInstruction,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { BN } from "@coral-xyz/anchor";
+import { web3 } from "@project-serum/anchor";
 import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
 import {
-  PROGRAM_ID,
   CrudServiceResult,
   CreateCrudEntryParams,
   UpdateCrudEntryParams,
   DeleteCrudEntryParams,
   CrudEntryState,
   ValidationResult,
+  PROGRAM_ID,
 } from "./crud.types";
-
-// Import the discriminators from your IDL
-const CREATE_CRUD_ENTRY_DISCRIMINATOR = [52, 79, 186, 16, 139, 8, 79, 194];
-const UPDATE_CRUD_ENTRY_DISCRIMINATOR = [42, 189, 91, 195, 130, 223, 6, 240];
-const DELETE_CRUD_ENTRY_DISCRIMINATOR = [170, 8, 190, 38, 255, 222, 33, 201];
+import { getAnchorProgram, deriveCrudEntryPDA } from "./crud.anchor";
 
 /**
- * Serialize a string for Solana instruction data
- */
-function serializeString(str: string): Buffer {
-  const strBytes = Buffer.from(str, "utf8");
-  const lengthBytes = Buffer.alloc(4);
-  lengthBytes.writeUInt32LE(strBytes.length, 0);
-  return Buffer.concat([lengthBytes, strBytes]);
-}
-
-/**
- * Create instruction data for CRUD operations
- */
-function createInstructionData(
-  discriminator: number[],
-  title: string,
-  message?: string
-): Buffer {
-  const discriminatorBuffer = Buffer.from(discriminator);
-  const titleBuffer = serializeString(title);
-
-  if (message !== undefined) {
-    const messageBuffer = serializeString(message);
-    return Buffer.concat([discriminatorBuffer, titleBuffer, messageBuffer]);
-  }
-
-  return Buffer.concat([discriminatorBuffer, titleBuffer]);
-}
-
-/**
- * Create a new CRUD entry
+ * Create a new CRUD entry using Anchor
  */
 export const createCrudEntry = async (
   connection: Connection,
@@ -76,77 +36,57 @@ export const createCrudEntry = async (
       };
     }
 
+    // Get Anchor program instance
+    const program = getAnchorProgram(connection, wallet);
+
     // Derive PDA for the CRUD entry
-    const [crudEntryPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from(params.title), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
+    const [crudEntryPda] = await deriveCrudEntryPDA(
+      params.title,
+      wallet.publicKey
     );
 
-    console.log("PDA derived:", crudEntryPDA.toString());
+    console.log("PDA derived:", crudEntryPda.toString());
 
     // Check if entry already exists
-    const existingAccount = await connection.getAccountInfo(crudEntryPDA);
-    if (existingAccount !== null) {
+    try {
+      await program.account.crudEntryState.fetch(crudEntryPda);
       return {
         signature: "",
         success: false,
         error: "Entry with this title already exists",
       };
+    } catch (err) {
+      // Entry doesn't exist, which is what we want for creation
     }
 
-    // Create instruction data
-    const instructionData = createInstructionData(
-      CREATE_CRUD_ENTRY_DISCRIMINATOR,
+    // Call the createCrudEntry RPC method
+    const txn = await program.rpc.createCrudEntry(
       params.title,
-      params.message
+      params.message,
+      {
+        accounts: {
+          crudEntry: crudEntryPda,
+          owner: wallet.publicKey,
+          systemProgram: web3.SystemProgram.programId,
+        },
+      }
     );
 
-    // Create the instruction
-    const instruction = new TransactionInstruction({
-      keys: [
-        {
-          pubkey: crudEntryPDA,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: wallet.publicKey,
-          isSigner: true,
-          isWritable: true,
-        },
-        {
-          pubkey: SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-      ],
-      programId: PROGRAM_ID,
-      data: instructionData,
-    });
+    console.log("Transaction signature:", txn);
 
-    // Create transaction
-    const transaction = new Transaction().add(instruction);
-
-    // Get recent blockhash
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
-
-    // Sign and send transaction
-    const signedTransaction = await wallet.signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(
-      signedTransaction.serialize()
+    // Fetch the created CRUD entry data
+    const crudEntryData = await program.account.crudEntryState.fetch(
+      crudEntryPda
     );
 
-    // Wait for confirmation
-    await connection.confirmTransaction(signature, "confirmed");
-
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature,
+      signature: txn,
       success: true,
       explorerUrl,
+      data: crudEntryData,
+      pda: crudEntryPda.toString(),
     };
   } catch (error) {
     console.error("Error creating CRUD entry:", error);
@@ -159,7 +99,7 @@ export const createCrudEntry = async (
 };
 
 /**
- * Update an existing CRUD entry
+ * Update an existing CRUD entry using Anchor
  */
 export const updateCrudEntry = async (
   connection: Connection,
@@ -181,15 +121,19 @@ export const updateCrudEntry = async (
       };
     }
 
+    // Get Anchor program instance
+    const program = getAnchorProgram(connection, wallet);
+
     // Derive PDA for the CRUD entry
-    const [crudEntryPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from(params.title), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
+    const [crudEntryPda] = await deriveCrudEntryPDA(
+      params.title,
+      wallet.publicKey
     );
 
     // Check if entry exists
-    const existingAccount = await connection.getAccountInfo(crudEntryPDA);
-    if (existingAccount === null) {
+    try {
+      await program.account.crudEntryState.fetch(crudEntryPda);
+    } catch (err) {
       return {
         signature: "",
         success: false,
@@ -197,59 +141,34 @@ export const updateCrudEntry = async (
       };
     }
 
-    // Create instruction data
-    const instructionData = createInstructionData(
-      UPDATE_CRUD_ENTRY_DISCRIMINATOR,
+    // Call the updateCrudEntry RPC method
+    const txn = await program.rpc.updateCrudEntry(
       params.title,
-      params.message
+      params.message,
+      {
+        accounts: {
+          crudEntry: crudEntryPda,
+          owner: wallet.publicKey,
+          systemProgram: web3.SystemProgram.programId,
+        },
+      }
     );
 
-    // Create the instruction
-    const instruction = new TransactionInstruction({
-      keys: [
-        {
-          pubkey: crudEntryPDA,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: wallet.publicKey,
-          isSigner: true,
-          isWritable: true,
-        },
-        {
-          pubkey: SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-      ],
-      programId: PROGRAM_ID,
-      data: instructionData,
-    });
+    console.log("Transaction signature:", txn);
 
-    // Create transaction
-    const transaction = new Transaction().add(instruction);
-
-    // Get recent blockhash
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
-
-    // Sign and send transaction
-    const signedTransaction = await wallet.signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(
-      signedTransaction.serialize()
+    // Fetch the updated CRUD entry data
+    const crudEntryData = await program.account.crudEntryState.fetch(
+      crudEntryPda
     );
 
-    // Wait for confirmation
-    await connection.confirmTransaction(signature, "confirmed");
-
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature,
+      signature: txn,
       success: true,
       explorerUrl,
+      data: crudEntryData,
+      pda: crudEntryPda.toString(),
     };
   } catch (error) {
     console.error("Error updating CRUD entry:", error);
@@ -262,7 +181,7 @@ export const updateCrudEntry = async (
 };
 
 /**
- * Delete a CRUD entry
+ * Delete a CRUD entry using Anchor
  */
 export const deleteCrudEntry = async (
   connection: Connection,
@@ -284,15 +203,19 @@ export const deleteCrudEntry = async (
       };
     }
 
+    // Get Anchor program instance
+    const program = getAnchorProgram(connection, wallet);
+
     // Derive PDA for the CRUD entry
-    const [crudEntryPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from(params.title), wallet.publicKey.toBuffer()],
-      PROGRAM_ID
+    const [crudEntryPda] = await deriveCrudEntryPDA(
+      params.title,
+      wallet.publicKey
     );
 
     // Check if entry exists
-    const existingAccount = await connection.getAccountInfo(crudEntryPDA);
-    if (existingAccount === null) {
+    try {
+      await program.account.crudEntryState.fetch(crudEntryPda);
+    } catch (err) {
       return {
         signature: "",
         success: false,
@@ -300,58 +223,24 @@ export const deleteCrudEntry = async (
       };
     }
 
-    // Create instruction data
-    const instructionData = createInstructionData(
-      DELETE_CRUD_ENTRY_DISCRIMINATOR,
-      params.title
-    );
-
-    // Create the instruction
-    const instruction = new TransactionInstruction({
-      keys: [
-        {
-          pubkey: crudEntryPDA,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: wallet.publicKey,
-          isSigner: true,
-          isWritable: true,
-        },
-        {
-          pubkey: SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-      ],
-      programId: PROGRAM_ID,
-      data: instructionData,
+    // Call the deleteCrudEntry RPC method
+    const txn = await program.rpc.deleteCrudEntry(params.title, {
+      accounts: {
+        crudEntry: crudEntryPda,
+        owner: wallet.publicKey,
+        systemProgram: web3.SystemProgram.programId,
+      },
     });
 
-    // Create transaction
-    const transaction = new Transaction().add(instruction);
+    console.log("Transaction signature:", txn);
 
-    // Get recent blockhash
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
-
-    // Sign and send transaction
-    const signedTransaction = await wallet.signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(
-      signedTransaction.serialize()
-    );
-
-    // Wait for confirmation
-    await connection.confirmTransaction(signature, "confirmed");
-
-    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`;
+    const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
     return {
-      signature,
+      signature: txn,
       success: true,
       explorerUrl,
+      pda: crudEntryPda.toString(),
     };
   } catch (error) {
     console.error("Error deleting CRUD entry:", error);
@@ -364,44 +253,7 @@ export const deleteCrudEntry = async (
 };
 
 /**
- * Deserialize account data to CrudEntryState
- */
-function deserializeCrudEntry(
-  data: Buffer,
-  expectedOwner: PublicKey
-): CrudEntryState | null {
-  try {
-    // Skip discriminator (8 bytes)
-    let offset = 8;
-
-    // Read owner (32 bytes)
-    const owner = new PublicKey(data.slice(offset, offset + 32));
-    offset += 32;
-
-    // Read title string (4 bytes length + string data)
-    const titleLength = data.readUInt32LE(offset);
-    offset += 4;
-    const title = data.slice(offset, offset + titleLength).toString("utf8");
-    offset += titleLength;
-
-    // Read message string (4 bytes length + string data)
-    const messageLength = data.readUInt32LE(offset);
-    offset += 4;
-    const message = data.slice(offset, offset + messageLength).toString("utf8");
-
-    return {
-      owner,
-      title,
-      message,
-    };
-  } catch (error) {
-    console.error("Error deserializing CRUD entry:", error);
-    return null;
-  }
-}
-
-/**
- * Get a specific CRUD entry
+ * Get a specific CRUD entry using Anchor
  */
 export const getCrudEntry = async (
   connection: Connection,
@@ -409,20 +261,29 @@ export const getCrudEntry = async (
   title: string
 ): Promise<CrudEntryState | null> => {
   try {
+    // Create a dummy wallet for read operations
+    const dummyWallet = {
+      publicKey: owner,
+      signTransaction: async () => {
+        throw new Error("Read-only operation");
+      },
+      signAllTransactions: async () => {
+        throw new Error("Read-only operation");
+      },
+    } as AnchorWallet;
+
+    // Get Anchor program instance
+    const program = getAnchorProgram(connection, dummyWallet);
+
     // Derive PDA for the CRUD entry
-    const [crudEntryPDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from(title), owner.toBuffer()],
-      PROGRAM_ID
+    const [crudEntryPda] = await deriveCrudEntryPDA(title, owner);
+
+    // Fetch the CRUD entry data
+    const crudEntryData = await program.account.crudEntryState.fetch(
+      crudEntryPda
     );
 
-    // Get account info
-    const accountInfo = await connection.getAccountInfo(crudEntryPDA);
-    if (accountInfo === null) {
-      return null;
-    }
-
-    // Deserialize the account data
-    return deserializeCrudEntry(accountInfo.data, owner);
+    return crudEntryData;
   } catch (error) {
     console.error("Error getting CRUD entry:", error);
     return null;
@@ -430,35 +291,43 @@ export const getCrudEntry = async (
 };
 
 /**
- * Get all CRUD entries for a user
+ * Get all CRUD entries for a user using Anchor
  */
 export const getUserCrudEntries = async (
   connection: Connection,
   owner: PublicKey
 ): Promise<CrudEntryState[]> => {
   try {
-    // Get all program accounts for this program
-    const programAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [
-        {
-          memcmp: {
-            offset: 8, // Skip discriminator
-            bytes: owner.toBase58(),
-          },
+    // Create a dummy wallet for read operations
+    const dummyWallet = {
+      publicKey: owner,
+      signTransaction: async () => {
+        throw new Error("Read-only operation");
+      },
+      signAllTransactions: async () => {
+        throw new Error("Read-only operation");
+      },
+    } as AnchorWallet;
+
+    // Get Anchor program instance
+    const program = getAnchorProgram(connection, dummyWallet);
+
+    // Get all program accounts for this program filtered by owner
+    const programAccounts = await program.account.crudEntryState.all([
+      {
+        memcmp: {
+          offset: 8, // Skip discriminator
+          bytes: owner.toBase58(),
         },
-      ],
-    });
+      },
+    ]);
 
     console.log(`Found ${programAccounts.length} accounts for owner`);
 
-    // Deserialize all accounts
-    const entries: CrudEntryState[] = [];
-    for (const account of programAccounts) {
-      const entry = deserializeCrudEntry(account.account.data, owner);
-      if (entry) {
-        entries.push(entry);
-      }
-    }
+    // Extract account data
+    const entries: CrudEntryState[] = programAccounts.map(
+      (account) => account.account
+    );
 
     return entries;
   } catch (error) {
