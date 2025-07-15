@@ -7,7 +7,6 @@ export const SOLANA_PROGRAMS = {
   ASSOCIATED_TOKEN: new PublicKey(
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
   ),
-  DEX: new PublicKey("F7TehQFrx3XkuMsLPcmKLz44UxTWWfyodNLSungdqoRX"),
   CRUD: new PublicKey("3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC"),
 };
 

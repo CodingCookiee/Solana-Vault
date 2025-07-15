@@ -132,30 +132,7 @@ export const ContractInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* DeFi */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                DeFi
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="body" color="muted">
-                Interact with DeFi protocols, swap tokens, and provide liquidity
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={() => router.push("/defi")}
-              variant="default"
-              className="w-full"
-            >
-              Go to DeFi
-            </Button>
-          </CardContent>
-        </Card>
+    
 
         {/* CRUD */}
         <Card className="mt-4">
