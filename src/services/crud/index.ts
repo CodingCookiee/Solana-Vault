@@ -1,16 +1,24 @@
+// Export all CRUD related types
+export * from "./crud.types";
+
 // Export all CRUD services
 export * from "./crud.service";
+
+// Export all CRUD hooks
 export * from "./crud.hooks";
-export * from "./crud.types";
+
+// Export Anchor utilities
 export * from "./crud.anchor";
 
-// Re-export commonly used functions
+// Re-export commonly used functions for convenience
 export {
+  initializeUserEntries,
   createCrudEntry,
   updateCrudEntry,
   deleteCrudEntry,
   getCrudEntry,
   getUserCrudEntries,
+  getUserEntriesAccountData,
   validateCrudEntry,
   validateTitle,
   isProgramDeployed,
@@ -20,20 +28,13 @@ export {
 export {
   useCrudService,
   useUserCrudEntries,
+  useUserEntriesAccount,
 } from "./crud.hooks";
 
 export {
-  PROGRAM_ID,
-  CRUDAPP_IDL,
-  type CrudEntryState,
-  type CrudServiceResult,
-  type CreateCrudEntryParams,
-  type UpdateCrudEntryParams,
-  type DeleteCrudEntryParams,
-  type Crudapp,
-} from "./crud.types";
-
-export {
   getAnchorProgram,
-  deriveCrudEntryPDA,
+  deriveUserEntriesPDA,
+  isUserEntriesInitialized,
+  getUserEntriesAccount,
+  getReadOnlyProgram,
 } from "./crud.anchor";

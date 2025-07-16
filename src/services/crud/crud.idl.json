@@ -2,8 +2,8 @@
   "accounts": [
     {
       "discriminator": [219, 112, 2, 117, 158, 76, 29, 55],
-      "name": "CrudEntryState",
-      "size": 1000
+      "name": "UserCrudEntries",
+      "size": 10000
     }
   ],
   "address": "3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC",
@@ -11,12 +11,14 @@
     {
       "accounts": [
         {
-          "name": "crud_entry",
+          "name": "user_entries",
           "pda": {
             "seeds": [
               {
-                "kind": "arg",
-                "path": "title"
+                "kind": "const",
+                "value": [
+                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
+                ]
               },
               {
                 "kind": "account",
@@ -52,49 +54,14 @@
     {
       "accounts": [
         {
-          "name": "crud_entry",
+          "name": "user_entries",
           "pda": {
             "seeds": [
               {
-                "kind": "arg",
-                "path": "title"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "owner",
-          "signer": true,
-          "writable": true
-        },
-        {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "title",
-          "type": "string"
-        }
-      ],
-      "discriminator": [170, 8, 190, 38, 255, 222, 33, 201],
-      "name": "delete_crud_entry"
-    },
-    {
-      "accounts": [
-        {
-          "name": "crud_entry",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "title"
+                "kind": "const",
+                "value": [
+                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
+                ]
               },
               {
                 "kind": "account",
@@ -126,6 +93,79 @@
       ],
       "discriminator": [42, 189, 91, 195, 130, 223, 6, 240],
       "name": "update_crud_entry"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user_entries",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        }
+      ],
+      "discriminator": [170, 8, 190, 38, 255, 222, 33, 201],
+      "name": "delete_crud_entry"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user_entries",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "address": "11111111111111111111111111111111",
+          "name": "system_program"
+        }
+      ],
+      "args": [],
+      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "name": "initialize_user_entries"
     }
   ],
   "metadata": {
@@ -136,13 +176,9 @@
   },
   "types": [
     {
-      "name": "CrudEntryState",
+      "name": "CrudEntry",
       "type": {
         "fields": [
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
           {
             "name": "title",
             "type": "string"
@@ -150,6 +186,36 @@
           {
             "name": "message",
             "type": "string"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "UserCrudEntries",
+      "type": {
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "entries",
+            "type": {
+              "vec": "CrudEntry"
+            }
+          },
+          {
+            "name": "total_entries",
+            "type": "u32"
           }
         ],
         "kind": "struct"
