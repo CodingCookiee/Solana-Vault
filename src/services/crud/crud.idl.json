@@ -2,8 +2,8 @@
   "accounts": [
     {
       "discriminator": [219, 112, 2, 117, 158, 76, 29, 55],
-      "name": "UserCrudEntries",
-      "size": 10000
+      "name": "CrudEntryState",
+      "size": 1000
     }
   ],
   "address": "3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC",
@@ -11,14 +11,12 @@
     {
       "accounts": [
         {
-          "name": "user_entries",
+          "name": "crud_entry",
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "value": [
-                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
-                ]
+                "kind": "arg",
+                "path": "title"
               },
               {
                 "kind": "account",
@@ -54,57 +52,12 @@
     {
       "accounts": [
         {
-          "name": "user_entries",
+          "name": "crud_entry",
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "value": [
-                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "owner",
-          "signer": true,
-          "writable": true
-        },
-        {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "title",
-          "type": "string"
-        },
-        {
-          "name": "message",
-          "type": "string"
-        }
-      ],
-      "discriminator": [42, 189, 91, 195, 130, 223, 6, 240],
-      "name": "update_crud_entry"
-    },
-    {
-      "accounts": [
-        {
-          "name": "user_entries",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
-                ]
+                "kind": "arg",
+                "path": "title"
               },
               {
                 "kind": "account",
@@ -136,14 +89,12 @@
     {
       "accounts": [
         {
-          "name": "user_entries",
+          "name": "crud_entry",
           "pda": {
             "seeds": [
               {
-                "kind": "const",
-                "value": [
-                  117, 115, 101, 114, 95, 101, 110, 116, 114, 105, 101, 115
-                ]
+                "kind": "arg",
+                "path": "title"
               },
               {
                 "kind": "account",
@@ -163,9 +114,18 @@
           "name": "system_program"
         }
       ],
-      "args": [],
-      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
-      "name": "initialize_user_entries"
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "discriminator": [42, 189, 91, 195, 130, 223, 6, 240],
+      "name": "update_crud_entry"
     }
   ],
   "metadata": {
@@ -176,31 +136,7 @@
   },
   "types": [
     {
-      "name": "CrudEntry",
-      "type": {
-        "fields": [
-          {
-            "name": "title",
-            "type": "string"
-          },
-          {
-            "name": "message",
-            "type": "string"
-          },
-          {
-            "name": "created_at",
-            "type": "i64"
-          },
-          {
-            "name": "updated_at",
-            "type": "i64"
-          }
-        ],
-        "kind": "struct"
-      }
-    },
-    {
-      "name": "UserCrudEntries",
+      "name": "CrudEntryState",
       "type": {
         "fields": [
           {
@@ -208,14 +144,12 @@
             "type": "pubkey"
           },
           {
-            "name": "entries",
-            "type": {
-              "vec": "CrudEntry"
-            }
+            "name": "title",
+            "type": "string"
           },
           {
-            "name": "total_entries",
-            "type": "u32"
+            "name": "message",
+            "type": "string"
           }
         ],
         "kind": "struct"

@@ -2,73 +2,11 @@ import { PublicKey } from "@solana/web3.js";
 import { Idl } from "@project-serum/anchor";
 
 /**
- * CRUD Program Types with Single PDA Architecture
+ * CRUD Program Types with Anchor Support
  */
 
 // Program constants
 export const PROGRAM_ID = new PublicKey("3AbGPHrtwVsPZgJsaZp9pJoMCWisyjKLXHn53QejTMSC");
-
-// Individual CRUD entry (stored within the user's account)
-export interface CrudEntry {
-  title: string;
-  message: string;
-  created_at: number;
-  updated_at: number;
-}
-
-// User's complete CRUD entries account (single PDA)
-export interface UserCrudEntries {
-  owner: PublicKey;
-  entries: CrudEntry[];
-  total_entries: number;
-}
-
-// For backward compatibility and UI display
-export interface CrudEntryState extends CrudEntry {
-  owner: PublicKey;
-}
-
-// Transaction result types
-export interface CrudTransactionResult {
-  signature: string;
-  success: boolean;
-  error?: string;
-  explorerUrl?: string;
-}
-
-// CRUD operation types
-export interface CreateCrudEntryParams {
-  title: string;
-  message: string;
-}
-
-export interface UpdateCrudEntryParams {
-  title: string;
-  message: string;
-}
-
-export interface DeleteCrudEntryParams {
-  title: string;
-}
-
-// Service result type
-export interface CrudServiceResult extends CrudTransactionResult {
-  data?: UserCrudEntries;
-}
-
-// Hook state types
-export interface CrudHookState {
-  entries: CrudEntryState[];
-  loading: boolean;
-  error: string | null;
-  isInitialized: boolean;
-}
-
-// Validation result
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
 
 // Anchor IDL Type Definition
 export type Crudapp = {
@@ -81,29 +19,24 @@ export type Crudapp = {
   };
   instructions: [
     {
-      name: "initializeUserEntries";
-      accounts: [
-        {
-          name: "userEntries";
-          writable: true;
-        },
-        {
-          name: "owner";
-          writable: true;
-          signer: true;
-        },
-        {
-          name: "systemProgram";
-        }
-      ];
-      args: [];
-    },
-    {
       name: "createCrudEntry";
+      discriminator: [52, 79, 186, 16, 139, 8, 79, 194];
       accounts: [
         {
-          name: "userEntries";
+          name: "crudEntry";
           writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "arg";
+                path: "title";
+              },
+              {
+                kind: "account";
+                path: "owner";
+              }
+            ];
+          };
         },
         {
           name: "owner";
@@ -112,6 +45,7 @@ export type Crudapp = {
         },
         {
           name: "systemProgram";
+          address: "11111111111111111111111111111111";
         }
       ];
       args: [
@@ -127,10 +61,23 @@ export type Crudapp = {
     },
     {
       name: "updateCrudEntry";
+      discriminator: [42, 189, 91, 195, 130, 223, 6, 240];
       accounts: [
         {
-          name: "userEntries";
+          name: "crudEntry";
           writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "arg";
+                path: "title";
+              },
+              {
+                kind: "account";
+                path: "owner";
+              }
+            ];
+          };
         },
         {
           name: "owner";
@@ -139,6 +86,7 @@ export type Crudapp = {
         },
         {
           name: "systemProgram";
+          address: "11111111111111111111111111111111";
         }
       ];
       args: [
@@ -154,10 +102,23 @@ export type Crudapp = {
     },
     {
       name: "deleteCrudEntry";
+      discriminator: [170, 8, 190, 38, 255, 222, 33, 201];
       accounts: [
         {
-          name: "userEntries";
+          name: "crudEntry";
           writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "arg";
+                path: "title";
+              },
+              {
+                kind: "account";
+                path: "owner";
+              }
+            ];
+          };
         },
         {
           name: "owner";
@@ -166,6 +127,7 @@ export type Crudapp = {
         },
         {
           name: "systemProgram";
+          address: "11111111111111111111111111111111";
         }
       ];
       args: [
@@ -178,36 +140,13 @@ export type Crudapp = {
   ];
   accounts: [
     {
-      name: "userCrudEntries";
+      name: "crudEntryState";
+      discriminator: [219, 112, 2, 117, 158, 76, 29, 55];
     }
   ];
   types: [
     {
-      name: "crudEntry";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "title";
-            type: "string";
-          },
-          {
-            name: "message";
-            type: "string";
-          },
-          {
-            name: "created_at";
-            type: "i64";
-          },
-          {
-            name: "updated_at";
-            type: "i64";
-          }
-        ];
-      };
-    },
-    {
-      name: "userCrudEntries";
+      name: "crudEntryState";
       type: {
         kind: "struct";
         fields: [
@@ -216,14 +155,12 @@ export type Crudapp = {
             type: "pubkey";
           },
           {
-            name: "entries";
-            type: {
-              vec: "CrudEntry";
-            };
+            name: "title";
+            type: "string";
           },
           {
-            name: "total_entries";
-            type: "u32";
+            name: "message";
+            type: "string";
           }
         ];
       };
@@ -237,33 +174,26 @@ export const CRUDAPP_IDL: Idl = {
   name: "crudapp",
   instructions: [
     {
-      name: "initializeUserEntries",
-      accounts: [
-        {
-          name: "userEntries",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "owner",
-          isMut: true,
-          isSigner: true,
-        },
-        {
-          name: "systemProgram",
-          isMut: false,
-          isSigner: false,
-        },
-      ],
-      args: [],
-    },
-    {
       name: "createCrudEntry",
       accounts: [
         {
-          name: "userEntries",
+          name: "crudEntry",
           isMut: true,
           isSigner: false,
+          pda: {
+            seeds: [
+              {
+                kind: "arg",
+                type: "string",
+                path: "title",
+              },
+              {
+                kind: "account",
+                type: "publicKey",
+                path: "owner",
+              },
+            ],
+          },
         },
         {
           name: "owner",
@@ -291,9 +221,23 @@ export const CRUDAPP_IDL: Idl = {
       name: "updateCrudEntry",
       accounts: [
         {
-          name: "userEntries",
+          name: "crudEntry",
           isMut: true,
           isSigner: false,
+          pda: {
+            seeds: [
+              {
+                kind: "arg",
+                type: "string",
+                path: "title",
+              },
+              {
+                kind: "account",
+                type: "publicKey",
+                path: "owner",
+              },
+            ],
+          },
         },
         {
           name: "owner",
@@ -321,9 +265,23 @@ export const CRUDAPP_IDL: Idl = {
       name: "deleteCrudEntry",
       accounts: [
         {
-          name: "userEntries",
+          name: "crudEntry",
           isMut: true,
           isSigner: false,
+          pda: {
+            seeds: [
+              {
+                kind: "arg",
+                type: "string",
+                path: "title",
+              },
+              {
+                kind: "account",
+                type: "publicKey",
+                path: "owner",
+              },
+            ],
+          },
         },
         {
           name: "owner",
@@ -346,7 +304,7 @@ export const CRUDAPP_IDL: Idl = {
   ],
   accounts: [
     {
-      name: "userCrudEntries",
+      name: "CrudEntryState",
       type: {
         kind: "struct",
         fields: [
@@ -355,28 +313,6 @@ export const CRUDAPP_IDL: Idl = {
             type: "publicKey",
           },
           {
-            name: "entries",
-            type: {
-              vec: {
-                defined: "CrudEntry",
-              },
-            },
-          },
-          {
-            name: "totalEntries",
-            type: "u32",
-          },
-        ],
-      },
-    },
-  ],
-  types: [
-    {
-      name: "CrudEntry",
-      type: {
-        kind: "struct",
-        fields: [
-          {
             name: "title",
             type: "string",
           },
@@ -384,16 +320,57 @@ export const CRUDAPP_IDL: Idl = {
             name: "message",
             type: "string",
           },
-          {
-            name: "createdAt",
-            type: "i64",
-          },
-          {
-            name: "updatedAt",
-            type: "i64",
-          },
         ],
       },
     },
   ],
 };
+
+// Account types from IDL
+export interface CrudEntryState {
+  owner: PublicKey;
+  title: string;
+  message: string;
+}
+
+// Transaction result types
+export interface CrudTransactionResult {
+  signature: string;
+  success: boolean;
+  error?: string;
+  explorerUrl?: string;
+}
+
+// CRUD operation types
+export interface CreateCrudEntryParams {
+  title: string;
+  message: string;
+}
+
+export interface UpdateCrudEntryParams {
+  title: string;
+  message: string;
+}
+
+export interface DeleteCrudEntryParams {
+  title: string;
+}
+
+// Service result type
+export interface CrudServiceResult extends CrudTransactionResult {
+  data?: CrudEntryState;
+  pda?: string;
+}
+
+// Hook state types
+export interface CrudHookState {
+  entries: CrudEntryState[];
+  loading: boolean;
+  error: string | null;
+}
+
+// Validation result
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}

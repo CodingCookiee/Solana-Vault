@@ -1,15 +1,10 @@
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Program, AnchorProvider, web3 } from "@project-serum/anchor";
+import { Connection } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { Program, AnchorProvider, web3 } from "@coral-xyz/anchor";
-import {
-  PROGRAM_ID,
-  CRUDAPP_IDL,
-  Crudapp,
-  UserCrudEntries,
-} from "./crud.types";
+import { PROGRAM_ID, CRUDAPP_IDL, Crudapp } from "./crud.types";
 
 /**
- * Get Anchor program instance for CRUD operations
+ * Get Anchor Program instance
  */
 export const getAnchorProgram = (
   connection: Connection,
@@ -17,90 +12,64 @@ export const getAnchorProgram = (
 ): Program<Crudapp> => {
   const provider = new AnchorProvider(connection, wallet, {
     preflightCommitment: "confirmed",
-    commitment: "confirmed",
   });
 
-  return new Program(
-    CRUDAPP_IDL as any,
-    PROGRAM_ID,
-    provider
-  ) as Program<Crudapp>;
+  return new Program(CRUDAPP_IDL as any, PROGRAM_ID, provider);
 };
 
 /**
- * Derive the user's entries PDA
- * This is the single PDA that holds all entries for a user
+ * Derive PDA for CRUD entry
  */
-export const deriveUserEntriesPDA = async (
-  owner: PublicKey
-): Promise<[PublicKey, number]> => {
-  return await PublicKey.findProgramAddress(
-    [Buffer.from("user_entries"), owner.toBuffer()],
+export const deriveCrudEntryPDA = async (
+  title: string,
+  owner: web3.PublicKey
+): Promise<[web3.PublicKey, number]> => {
+  return await web3.PublicKey.findProgramAddress(
+    [Buffer.from(title), owner.toBuffer()],
     PROGRAM_ID
   );
 };
 
 /**
- * Check if user's entries account is initialized
- */
-export const isUserEntriesInitialized = async (
-  connection: Connection,
-  owner: PublicKey
-): Promise<boolean> => {
-  try {
-    const [userEntriesPDA] = await deriveUserEntriesPDA(owner);
-    const accountInfo = await connection.getAccountInfo(userEntriesPDA);
-    return accountInfo !== null;
-  } catch (error) {
-    console.error("Error checking if user entries initialized:", error);
-    return false;
-  }
-};
-
-/**
- * Get user's entries account data
- */
-export const getUserEntriesAccount = async (
-  connection: Connection,
-  wallet: AnchorWallet,
-  owner: PublicKey
-): Promise<UserCrudEntries | null> => {
-  try {
-    const program = getAnchorProgram(connection, wallet);
-    const [userEntriesPDA] = await deriveUserEntriesPDA(owner);
-
-    const accountData = await program.account.userCrudEntries.fetch(
-      userEntriesPDA
-    );
-    return accountData as UserCrudEntries;
-  } catch (error) {
-    console.error("Error fetching user entries account:", error);
-    return null;
-  }
-};
-
-/**
- * Create a dummy wallet for read-only operations
- */
-export const createDummyWallet = (): AnchorWallet => {
-  const keypair = web3.Keypair.generate();
-  return {
-    publicKey: keypair.publicKey,
-    signTransaction: async (tx) => {
-      throw new Error("Dummy wallet cannot sign transactions");
-    },
-    signAllTransactions: async (txs) => {
-      throw new Error("Dummy wallet cannot sign transactions");
-    },
-  };
-};
-
-/**
- * Get program instance for read-only operations
+ * Create a read-only program instance for fetching data
  */
 export const getReadOnlyProgram = (
-  connection: Connection
+  connection: Connection,
+  publicKey: web3.PublicKey
 ): Program<Crudapp> => {
-  const dummyWallet = createDummyWallet();
-  return getAnchorProgram(connection, dummyWallet);
+  // Create a dummy wallet for read operations
+  const dummyWallet = {
+    publicKey,
+    signTransaction: async () => { 
+      throw new Error("Read-only operation"); 
+    },
+    signAllTransactions: async () => { 
+      throw new Error("Read-only operation"); 
+    },
+  } as AnchorWallet;
+
+  const provider = new AnchorProvider(connection, dummyWallet, {
+    preflightCommitment: "confirmed",
+  });
+
+  return new Program(CRUDAPP_IDL as any, PROGRAM_ID, provider);
+};
+
+/**
+ * Check if a CRUD entry exists
+ */
+export const checkCrudEntryExists = async (
+  connection: Connection,
+  owner: web3.PublicKey,
+  title: string
+): Promise<boolean> => {
+  try {
+    const program = getReadOnlyProgram(connection, owner);
+    const [crudEntryPda] = await deriveCrudEntryPDA(title, owner);
+    
+    await program.account.crudEntryState.fetch(crudEntryPda);
+    return true;
+  } catch (error) {
+    return false;
+  }
 };

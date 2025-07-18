@@ -13,12 +13,11 @@ import {
 } from "@/components/ui/common";
 
 /**
- * CRUD Interface Component with Single PDA Architecture
+ * CRUD Interface Component
  */
 export const Crud: React.FC = () => {
   const {
     // Operations
-    initializeUser,
     createEntry,
     updateEntry,
     deleteEntry,
@@ -29,7 +28,6 @@ export const Crud: React.FC = () => {
     loading,
     error,
     isWalletConnected,
-    isInitialized,
 
     // Utility
     clearError,
@@ -45,7 +43,6 @@ export const Crud: React.FC = () => {
 
   // Individual loading states for each operation
   const [loadingStates, setLoadingStates] = useState({
-    initialize: false,
     create: false,
     update: false,
     delete: false,
@@ -57,20 +54,6 @@ export const Crud: React.FC = () => {
     isLoading: boolean
   ) => {
     setLoadingStates((prev) => ({ ...prev, [operation]: isLoading }));
-  };
-
-  const handleInitialize = async () => {
-    setOperationLoading("initialize", true);
-    const result = await initializeUser();
-    setOperationLoading("initialize", false);
-
-    if (result.success) {
-      setStatus("User entries account initialized successfully!");
-      setExplorerUrl(result.explorerUrl || null);
-    } else {
-      setStatus(`Error: ${result.error}`);
-      setExplorerUrl(null);
-    }
   };
 
   const handleCreate = async () => {
@@ -190,36 +173,6 @@ export const Crud: React.FC = () => {
         CRUD Interface
       </Text>
 
-      {/* Initialization Status */}
-      {!isInitialized && (
-        <Card className="bg-blue-50 border-blue-200 mb-6">
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h4" color="primary">
-                Account Not Initialized
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text color="primary">
-                You need to initialize your entries account before you can
-                create, update, or delete entries.
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={handleInitialize}
-              disabled={loadingStates.initialize}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              {loadingStates.initialize
-                ? "Initializing..."
-                : "Initialize Account"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Error/Status Display */}
       {(error || status) && (
         <Card
@@ -326,8 +279,7 @@ export const Crud: React.FC = () => {
                     }
                     placeholder="Enter title (max 50 characters)"
                     maxLength={50}
-                    disabled={!isInitialized}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -350,14 +302,13 @@ export const Crud: React.FC = () => {
                     placeholder="Enter message (max 500 characters)"
                     maxLength={500}
                     rows={4}
-                    disabled={!isInitialized}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <Button
                   onClick={handleCreate}
-                  disabled={loadingStates.create || !isInitialized}
-                  className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
+                  disabled={loadingStates.create}
+                  className="w-full bg-green-500 hover:bg-green-600"
                 >
                   {loadingStates.create ? "Creating..." : "Create Entry"}
                 </Button>
@@ -399,8 +350,7 @@ export const Crud: React.FC = () => {
                     }
                     placeholder="Enter title to update"
                     maxLength={50}
-                    disabled={!isInitialized}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -423,15 +373,14 @@ export const Crud: React.FC = () => {
                     placeholder="Enter new message"
                     maxLength={500}
                     rows={4}
-                    disabled={!isInitialized}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleUpdate}
-                    disabled={loadingStates.update || !isInitialized}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400"
+                    disabled={loadingStates.update}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600"
                   >
                     {loadingStates.update ? "Updating..." : "Update Entry"}
                   </Button>
@@ -441,7 +390,7 @@ export const Crud: React.FC = () => {
                         setSelectedEntry(null);
                         setUpdateForm({ title: "", message: "" });
                       }}
-                      disabled={loadingStates.update || !isInitialized}
+                      disabled={loadingStates.update}
                       variant="secondary"
                       className="flex-1"
                     >
@@ -477,15 +426,14 @@ export const Crud: React.FC = () => {
                     onChange={(e) => setDeleteTitle(e.target.value)}
                     placeholder="Enter title to delete"
                     maxLength={50}
-                    disabled={!isInitialized}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                 </div>
                 <Button
                   onClick={handleDelete}
-                  disabled={loadingStates.delete || !isInitialized}
+                  disabled={loadingStates.delete}
                   variant="destructive"
-                  className="w-full disabled:bg-gray-400"
+                  className="w-full"
                 >
                   {loadingStates.delete ? "Deleting..." : "Delete Entry"}
                 </Button>
@@ -512,21 +460,15 @@ export const Crud: React.FC = () => {
               <div className="mb-4">
                 <Button
                   onClick={handleRefresh}
-                  disabled={loadingStates.refresh || !isInitialized}
+                  disabled={loadingStates.refresh}
                   variant="secondary"
-                  className="w-full disabled:bg-gray-400"
+                  className="w-full"
                 >
                   {loadingStates.refresh ? "Refreshing..." : "Refresh Entries"}
                 </Button>
               </div>
 
-              {!isInitialized ? (
-                <div className="text-center py-8">
-                  <Text color="muted">
-                    Please initialize your account first to view entries.
-                  </Text>
-                </div>
-              ) : entries.length === 0 ? (
+              {entries.length === 0 ? (
                 <div className="text-center py-8">
                   <Text color="muted">
                     No entries found. Create your first entry using the form on
@@ -546,9 +488,7 @@ export const Crud: React.FC = () => {
                             <div className="flex gap-1">
                               <Button
                                 onClick={() => handleEditEntry(entry)}
-                                disabled={
-                                  isAnyOperationLoading || !isInitialized
-                                }
+                                disabled={isAnyOperationLoading}
                                 size="sm"
                                 variant="outline"
                                 className="text-xs"
@@ -557,9 +497,7 @@ export const Crud: React.FC = () => {
                               </Button>
                               <Button
                                 onClick={() => setDeleteTitle(entry.title)}
-                                disabled={
-                                  isAnyOperationLoading || !isInitialized
-                                }
+                                disabled={isAnyOperationLoading}
                                 size="sm"
                                 variant="destructive"
                                 className="text-xs"
@@ -571,29 +509,10 @@ export const Crud: React.FC = () => {
                           <Text color="secondary" className="break-words">
                             {entry.message}
                           </Text>
-                          <div className="flex justify-between items-center text-xs text-gray-500">
-                            <Text variant="small" color="muted">
-                              Owner: {entry.owner.toBase58().slice(0, 8)}...
-                              {entry.owner.toBase58().slice(-8)}
-                            </Text>
-                            {entry.created_at && (
-                              <Text variant="small" color="muted">
-                                Created:{" "}
-                                {new Date(
-                                  entry.created_at * 1000
-                                ).toLocaleDateString()}
-                              </Text>
-                            )}
-                          </div>
-                          {entry.updated_at &&
-                            entry.updated_at !== entry.created_at && (
-                              <Text variant="small" color="muted">
-                                Updated:{" "}
-                                {new Date(
-                                  entry.updated_at * 1000
-                                ).toLocaleDateString()}
-                              </Text>
-                            )}
+                          <Text variant="small" color="muted">
+                            Owner: {entry.owner.toBase58().slice(0, 8)}...
+                            {entry.owner.toBase58().slice(-8)}
+                          </Text>
                         </div>
                       </CardContent>
                     </Card>
