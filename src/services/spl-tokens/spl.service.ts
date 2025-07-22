@@ -33,7 +33,15 @@ import {
   TransactionResult,
   MintInfo,
   SolanaWallet,
+  CreateTokenOptions,
+  TokenMetadata,
 } from "./spl.types";
+
+// For Metaplex Token Metadata
+import {
+  createCreateMetadataAccountV3Instruction,
+  PROGRAM_ID as METADATA_PROGRAM_ID,
+} from "@metaplex-foundation/mpl-token-metadata";
 
 // Helper function to ensure wallet is connected
 export const ensureWalletConnected = (publicKey: PublicKey | null) => {
@@ -68,11 +76,58 @@ export const getSOLBalance = async (
   }
 };
 
-// Create a new SPL token
+// Helper function to derive metadata PDA
+const findMetadataPda = (mint: PublicKey): PublicKey => {
+  // Hardcoded Metaplex Token Metadata Program ID for when the import fails
+  const metaplexProgramId = new PublicKey(
+    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+  );
+
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("metadata"), metaplexProgramId.toBuffer(), mint.toBuffer()],
+    metaplexProgramId
+  );
+  return pda;
+};
+
+// Convert file to data URL
+const fileToDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
+// Create metadata JSON for token
+const createTokenMetadataJSON = async (
+  metadata: TokenMetadata
+): Promise<string> => {
+  const metadataJson: Record<string, any> = {
+    name: metadata.name,
+    symbol: metadata.symbol,
+    description: metadata.description || `A ${metadata.name} token`,
+  };
+
+  // Handle image (could be URL, File, or null)
+  if (metadata.image) {
+    if (typeof metadata.image === "string") {
+      metadataJson.image = metadata.image;
+    } else if (metadata.image instanceof File) {
+      // Convert file to data URL
+      metadataJson.image = await fileToDataUrl(metadata.image);
+    }
+  }
+
+  return JSON.stringify(metadataJson);
+};
+
+// Create a new SPL token with metadata
 export const createToken = async (
   connection: Connection,
   wallet: SolanaWallet,
-  decimals: number = 9
+  options: CreateTokenOptions = {}
 ): Promise<TransactionResult> => {
   try {
     ensureWalletConnected(wallet.publicKey);
@@ -80,6 +135,8 @@ export const createToken = async (
     if (!wallet.sendTransaction) {
       throw new Error("Wallet does not support sending transactions");
     }
+
+    const decimals = options.decimals ?? 9;
 
     // Generate a new keypair for the mint
     const mintKeypair = Keypair.generate();
@@ -90,8 +147,10 @@ export const createToken = async (
     );
 
     // Create transaction
-    const transaction = new Transaction().add(
-      // Create mint account
+    const transaction = new Transaction();
+
+    // Add instruction to create mint account
+    transaction.add(
       SystemProgram.createAccount({
         fromPubkey: wallet.publicKey!,
         newAccountPubkey: mintKeypair.publicKey,
@@ -105,6 +164,70 @@ export const createToken = async (
         decimals, // Decimals
         wallet.publicKey!, // Mint authority
         wallet.publicKey! // Freeze authority (optional)
+      )
+    );
+
+    // If metadata is provided, add metadata instruction
+    if (options.metadata) {
+      const metadata = options.metadata;
+
+      try {
+        // Create metadata PDA
+        const metadataPDA = findMetadataPda(mintKeypair.publicKey);
+
+        // Generate URI with inline data if no URI is provided
+        let uri = metadata.uri || "";
+        if (!uri && metadata.image) {
+          // Create a simple JSON metadata with the image
+          const metadataJSON = await createTokenMetadataJSON(metadata);
+          uri = `data:application/json,${encodeURIComponent(metadataJSON)}`;
+        }
+
+        // Create metadata instruction
+        const metadataInstruction = createCreateMetadataAccountV3Instruction(
+          {
+            metadata: metadataPDA,
+            mint: mintKeypair.publicKey,
+            mintAuthority: wallet.publicKey!,
+            payer: wallet.publicKey!,
+            updateAuthority: wallet.publicKey!,
+          },
+          {
+            createMetadataAccountArgsV3: {
+              data: {
+                name: metadata.name,
+                symbol: metadata.symbol,
+                uri: uri,
+                sellerFeeBasisPoints: metadata.sellerFeeBasisPoints || 0,
+                creators: null,
+                collection: null,
+                uses: null,
+              },
+              isMutable: true,
+              collectionDetails: null,
+            },
+          }
+        );
+
+        transaction.add(metadataInstruction);
+      } catch (error) {
+        console.error("Error creating metadata:", error);
+        // Continue without metadata if there's an error
+      }
+    }
+
+    // Create an associated token account for the user
+    const associatedTokenAddress = getAssociatedTokenAddressSync(
+      mintKeypair.publicKey,
+      wallet.publicKey!
+    );
+
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        wallet.publicKey!, // Payer
+        associatedTokenAddress, // Associated token account
+        wallet.publicKey!, // Owner
+        mintKeypair.publicKey // Mint
       )
     );
 

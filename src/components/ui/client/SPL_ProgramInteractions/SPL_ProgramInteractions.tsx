@@ -1,9 +1,12 @@
 "use client";
 
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSplTokens } from "@/services/spl-tokens";
-import type { TokenInfo, TransactionResult, MintInfo } from "@/services/spl-tokens";
+import type {
+  TokenInfo,
+  TransactionResult,
+  MintInfo,
+} from "@/services/spl-tokens";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
 import {
   Card,
@@ -15,7 +18,7 @@ import {
   Text,
 } from "@/components/ui/common";
 
-export const ProgramInteractions: React.FC = () => {
+export const SPLProgramInteractions: React.FC = () => {
   const solana = useSplTokens();
 
   // State management
@@ -37,6 +40,16 @@ export const ProgramInteractions: React.FC = () => {
   const [approveDelegate, setApproveDelegate] = useState<string>("");
   const [approveAmount, setApproveAmount] = useState<string>("50");
   const [decimals, setDecimals] = useState<string>("9");
+
+  //  token metadata fields
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tokenName, setTokenName] = useState<string>("My Token");
+  const [tokenSymbol, setTokenSymbol] = useState<string>("TKN");
+  const [tokenUri, setTokenUri] = useState<string>("");
+  const [tokenImage, setTokenImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [tokenDescription, setTokenDescription] =
+    useState<string>("A custom SPL token");
 
   // Load initial data
   useEffect(() => {
@@ -133,6 +146,30 @@ export const ProgramInteractions: React.FC = () => {
     }
   };
 
+  // Handle image selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setTokenImage(file);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear image
+  const handleClearImage = () => {
+    setTokenImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   // Token operations
   const handleCreateToken = async () => {
     await executeWithLoading(async () => {
@@ -141,7 +178,18 @@ export const ProgramInteractions: React.FC = () => {
         throw new Error("Decimals must be a number between 0 and 9");
       }
 
-      const result = await solana.createToken(decimalsNum);
+      // Create token with metadata
+      const result = await solana.createToken({
+        decimals: decimalsNum,
+        metadata: {
+          name: tokenName,
+          symbol: tokenSymbol,
+          description: tokenDescription,
+          image: tokenImage || tokenUri || undefined,
+          sellerFeeBasisPoints: 0,
+        },
+      });
+
       if (result.success) {
         setTokenMint(result.signature);
         handleResult(result, "Token created");
@@ -338,7 +386,6 @@ export const ProgramInteractions: React.FC = () => {
           </CardHeader>
         </Card>
 
-
         {/* Token Creation */}
         <Card>
           <CardHeader>
@@ -349,13 +396,59 @@ export const ProgramInteractions: React.FC = () => {
             </CardTitle>
             <CardDescription>
               <Text variant="small" color="muted">
-                Create a new SPL token with custom decimals
+                Create a new SPL token with custom properties
               </Text>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-1">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Token Name
+                  </Text>
+                </label>
+                <input
+                  type="text"
+                  value={tokenName}
+                  onChange={(e) => setTokenName(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="My Token"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Token Symbol
+                  </Text>
+                </label>
+                <input
+                  type="text"
+                  value={tokenSymbol}
+                  onChange={(e) => setTokenSymbol(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="TKN"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block mb-2">
+                <Text variant="small" weight="medium">
+                  Description (Optional)
+                </Text>
+              </label>
+              <input
+                type="text"
+                value={tokenDescription}
+                onChange={(e) => setTokenDescription(e.target.value)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                placeholder="A description of your token"
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
                     Decimals
@@ -370,16 +463,76 @@ export const ProgramInteractions: React.FC = () => {
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
                 />
               </div>
-              <div className="flex-1 flex items-end">
-                <Button
-                  onClick={handleCreateToken}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  Create Token
-                </Button>
+
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Token Image (Optional)
+                  </Text>
+                </label>
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      variant="outline"
+                      size="sm"
+                      className="flex-grow"
+                    >
+                      {tokenImage ? "Change Image" : "Upload Image"}
+                    </Button>
+                    {tokenImage && (
+                      <Button
+                        type="button"
+                        onClick={handleClearImage}
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-300"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+
+                  {imagePreview && (
+                    <div className="mt-2 relative w-20 h-20 border rounded overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Token preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <Text variant="extraSmall" color="muted">
+                    Or use a hosted image URL:
+                  </Text>
+                  <input
+                    type="text"
+                    value={tokenUri}
+                    onChange={(e) => setTokenUri(e.target.value)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                    placeholder="https://example.com/image.png"
+                    disabled={!!tokenImage}
+                  />
+                </div>
               </div>
             </div>
+
+            <Button
+              onClick={handleCreateToken}
+              disabled={loading || !tokenName || !tokenSymbol}
+              className="w-full"
+            >
+              Create Token
+            </Button>
 
             {tokenMint && (
               <div className="space-y-2">
@@ -786,7 +939,6 @@ export const ProgramInteractions: React.FC = () => {
             </CardContent>
           </Card>
         )}
-
       </div>
     </AuthGate>
   );

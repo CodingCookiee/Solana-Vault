@@ -4,6 +4,7 @@ import {
   TokenInfo,
   TransactionResult,
   MintInfo,
+  CreateTokenOptions,
 } from "./spl.types";
 import * as SplService from "./spl.service";
 
@@ -20,9 +21,9 @@ export const useSplTokens = () => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.getSOLBalance(connection, wallet.publicKey);
     },
-    createToken: (decimals?: number) => {
+    createToken: (options?: CreateTokenOptions) => {
       if (!isReady) throw new Error("Wallet not ready");
-      return SplService.createToken(connection, wallet, decimals);
+      return SplService.createToken(connection, wallet, options);
     },
     createTokenAccount: (mintAddress: string) => {
       if (!isReady) throw new Error("Wallet not ready");

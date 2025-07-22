@@ -21,6 +21,19 @@ export interface MintInfo {
   freezeAuthority: string | null;
 }
 
+export interface TokenMetadata {
+  name: string;
+  symbol: string;
+  description?: string;
+  image?: string | File;  // Can be a URL or a File object
+  sellerFeeBasisPoints?: number;
+}
+
+export interface CreateTokenOptions {
+  decimals?: number;
+  metadata?: TokenMetadata;
+}
+
 export interface SolanaWallet {
   publicKey: PublicKey | null;
   connected: boolean;
