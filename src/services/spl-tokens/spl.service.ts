@@ -22,10 +22,7 @@ import {
   AccountLayout,
   MintLayout,
 } from "@solana/spl-token";
-import {
-  createCreateMetadataAccountV3Instruction,
-
-} from "@metaplex-foundation/mpl-token-metadata";
+import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import {
   CreateTokenForm,
   TokenInfo,
@@ -180,6 +177,27 @@ export const createToken = async (
     );
 
     console.log("Transaction signature:", signature);
+
+    // Save created token to local storage
+    const createdToken: CreatedToken = {
+      mintAddress: mintKeypair.publicKey.toBase58(),
+      name: form.tokenName,
+      symbol: form.symbol,
+      decimals: form.decimals,
+      totalSupply: form.amount,
+      mintAuthority: publicKey!.toBase58(),
+      freezeAuthority: publicKey!.toBase58(),
+      createdAt: new Date(),
+      metadata: {
+        name: form.tokenName,
+        symbol: form.symbol,
+        uri: form.metadata,
+      },
+      userBalance: form.amount,
+      tokenAccount: tokenATA.toBase58(),
+    };
+
+    saveCreatedTokenToStorage(createdToken);
 
     return {
       signature: mintKeypair.publicKey.toBase58(), // Return mint address
@@ -501,7 +519,7 @@ export const getTokenMetadata = async (
   }
 };
 
-// Get all tokens created by the user (where they are mint authority)
+// Update the getCreatedTokens function to handle the RPC limitation
 export const getCreatedTokens = async (
   connection: Connection,
   publicKey: PublicKey | null
@@ -511,92 +529,138 @@ export const getCreatedTokens = async (
 
     console.log("Fetching created tokens for:", publicKey!.toBase58());
 
-    // Get all mint accounts where the user is the mint authority
-    const filters: GetProgramAccountsFilter[] = [
-      {
-        dataSize: MINT_SIZE, // Filter for mint accounts
-      },
-      {
-        memcmp: {
-          offset: 4, // Mint authority is at offset 4
-          bytes: publicKey!.toBase58(),
-        },
-      },
-    ];
+    // Since getProgramAccounts is not available for Token Program on many RPC endpoints,
+    // we'll use a different approach - get transaction history and parse token creation transactions
+    // For now, we'll return an empty array and suggest using a different approach
 
-    const mintAccounts = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
-      filters,
-    });
+    console.log(
+      "getProgramAccounts not available for Token Program on this RPC endpoint"
+    );
+    console.log(
+      "Consider using a custom RPC endpoint or storing created tokens locally"
+    );
 
-    console.log(`Found ${mintAccounts.length} mint accounts`);
-
-    const createdTokens: CreatedToken[] = [];
-
-    for (const { pubkey: mintPubkey, account } of mintAccounts) {
-      try {
-        // Parse mint data
-        const mintData = MintLayout.decode(account.data);
-
-        // Skip if not a valid mint or user is not the authority
-        if (
-          !mintData.mintAuthority ||
-          !mintData.mintAuthority.equals(publicKey!)
-        ) {
-          continue;
-        }
-
-        const mintAddress = mintPubkey.toBase58();
-
-        // Get mint info
-        const mintInfo = await getMint(connection, mintPubkey);
-
-        // Get metadata
-        const metadata = await getTokenMetadata(connection, mintAddress);
-
-        // Get user's token balance
-        let userBalance = 0;
-        let tokenAccount = "";
-
-        try {
-          const userATA = await getAssociatedTokenAddress(
-            mintPubkey,
-            publicKey!
-          );
-          const accountInfo = await getAccount(connection, userATA);
-          userBalance =
-            Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals);
-          tokenAccount = userATA.toBase58();
-        } catch (error) {
-          // User doesn't have a token account for this mint
-          console.log(`No token account found for mint ${mintAddress}`);
-        }
-
-        const createdToken: CreatedToken = {
-          mintAddress,
-          name: metadata?.name || "Unknown Token",
-          symbol: metadata?.symbol || "UNK",
-          decimals: mintInfo.decimals,
-          totalSupply:
-            Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
-          mintAuthority: mintInfo.mintAuthority?.toBase58() || null,
-          freezeAuthority: mintInfo.freezeAuthority?.toBase58() || null,
-          metadata,
-          userBalance,
-          tokenAccount,
-        };
-
-        createdTokens.push(createdToken);
-      } catch (error) {
-        console.error(`Error processing mint ${mintPubkey.toBase58()}:`, error);
-        continue;
-      }
-    }
-
-    console.log(`Successfully processed ${createdTokens.length} tokens`);
-    return createdTokens.sort((a, b) => b.totalSupply - a.totalSupply); // Sort by supply descending
+    return [];
   } catch (error) {
     console.error("Error getting created tokens:", error);
+
+    // If the error is about RPC method unavailability, return empty array
+    if (
+      error instanceof Error &&
+      error.message.includes("excluded from account secondary indexes")
+    ) {
+      console.log(
+        "RPC endpoint doesn't support getProgramAccounts for Token Program"
+      );
+      return [];
+    }
+
     return [];
+  }
+};
+
+// Alternative approach: Get created tokens from local storage
+export const getCreatedTokensFromStorage = (): CreatedToken[] => {
+  try {
+    const stored = localStorage.getItem("created-tokens");
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Error reading created tokens from storage:", error);
+    return [];
+  }
+};
+
+// Save created token to local storage
+export const saveCreatedTokenToStorage = (token: CreatedToken): void => {
+  try {
+    const existing = getCreatedTokensFromStorage();
+    const updated = [
+      ...existing.filter((t) => t.mintAddress !== token.mintAddress),
+      token,
+    ];
+    localStorage.setItem("created-tokens", JSON.stringify(updated));
+  } catch (error) {
+    console.error("Error saving created token to storage:", error);
+  }
+};
+
+// Remove created token from local storage
+export const removeCreatedTokenFromStorage = (mintAddress: string): void => {
+  try {
+    const existing = getCreatedTokensFromStorage();
+    const updated = existing.filter((t) => t.mintAddress !== mintAddress);
+    localStorage.setItem("created-tokens", JSON.stringify(updated));
+  } catch (error) {
+    console.error("Error removing created token from storage:", error);
+  }
+};
+
+// Close token account (this removes the token from your wallet)
+export const closeTokenAccount = async (
+  connection: Connection,
+  publicKey: PublicKey | null,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
+  mintAddress: string
+): Promise<TransactionResult> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    if (!mintAddress) {
+      throw new Error("Mint address is required");
+    }
+
+    const mint = new PublicKey(mintAddress);
+    const tokenAccount = await getAssociatedTokenAddress(mint, publicKey!);
+
+    // Check if account exists and get balance
+    try {
+      const accountInfo = await getAccount(connection, tokenAccount);
+
+      // If there are tokens in the account, we need to burn them first or transfer them out
+      if (Number(accountInfo.amount) > 0) {
+        throw new Error(
+          `Cannot close account with ${Number(
+            accountInfo.amount
+          )} tokens. Transfer or burn tokens first.`
+        );
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("could not find account")
+      ) {
+        throw new Error("Token account does not exist");
+      }
+      throw error;
+    }
+
+    // Import the close account instruction
+    const { createCloseAccountInstruction } = await import("@solana/spl-token");
+
+    const transaction = new Transaction().add(
+      createCloseAccountInstruction(
+        tokenAccount, // Account to close
+        publicKey!, // Destination for remaining SOL
+        publicKey! // Owner
+      )
+    );
+
+    const signature = await sendTransaction(transaction, connection);
+
+    return {
+      signature,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error closing token account:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 };
 

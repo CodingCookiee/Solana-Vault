@@ -64,6 +64,16 @@ export const useSplTokens = () => {
       );
     },
 
+    closeTokenAccount: (mintAddress: string) => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.closeTokenAccount(
+        connection,
+        wallet.publicKey,
+        wallet.sendTransaction!,
+        mintAddress
+      );
+    },
+
     getTokenAccountInfo: (mintAddress: string) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.getTokenAccountInfo(
@@ -78,10 +88,10 @@ export const useSplTokens = () => {
       return SplService.getMintInfo(connection, mintAddress);
     },
 
-    // New token history functions
+    // Updated token history functions
     getCreatedTokens: () => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.getCreatedTokens(connection, wallet.publicKey);
+      // Use local storage instead of RPC call
+      return Promise.resolve(SplService.getCreatedTokensFromStorage());
     },
 
     getOwnedTokens: () => {
@@ -92,6 +102,11 @@ export const useSplTokens = () => {
     getTokenMetadata: (mintAddress: string) => {
       if (!connection) throw new Error("Connection not ready");
       return SplService.getTokenMetadata(connection, mintAddress);
+    },
+
+    // Local storage functions
+    removeCreatedTokenFromStorage: (mintAddress: string) => {
+      SplService.removeCreatedTokenFromStorage(mintAddress);
     },
 
     // Wallet state
