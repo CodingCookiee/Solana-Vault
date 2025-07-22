@@ -23,8 +23,16 @@ import {
 export const SPLProgramInteractions: React.FC = () => {
   const solana = useSplTokens();
 
-  // State management
-  const [loading, setLoading] = useState(false);
+  // Separate loading states for each operation
+  const [loadingStates, setLoadingStates] = useState({
+    create: false,
+    mint: false,
+    transfer: false,
+    burn: false,
+    closeAccount: false,
+    general: false, // for other operations like loading balance, token info
+  });
+
   const [status, setStatus] = useState<string>("");
   const [solBalance, setSolBalance] = useState<number | null>(null);
 
@@ -56,6 +64,20 @@ export const SPLProgramInteractions: React.FC = () => {
     "created"
   );
 
+  // Helper function to update specific loading state
+  const setLoadingState = (
+    operation: keyof typeof loadingStates,
+    loading: boolean
+  ) => {
+    setLoadingStates((prev) => ({
+      ...prev,
+      [operation]: loading,
+    }));
+  };
+
+  // Check if any operation is loading
+  const isAnyLoading = Object.values(loadingStates).some((loading) => loading);
+
   // Load initial data
   useEffect(() => {
     if (solana.connected && solana.isReady) {
@@ -80,6 +102,7 @@ export const SPLProgramInteractions: React.FC = () => {
     }
 
     try {
+      setLoadingState("general", true);
       const balance = await solana.getSOLBalance();
       setSolBalance(balance);
     } catch (error) {
@@ -89,6 +112,8 @@ export const SPLProgramInteractions: React.FC = () => {
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
+    } finally {
+      setLoadingState("general", false);
     }
   };
 
@@ -156,7 +181,8 @@ export const SPLProgramInteractions: React.FC = () => {
 
   const executeWithLoading = async (
     operation: () => Promise<void>,
-    loadingMessage: string
+    loadingMessage: string,
+    operationType: keyof typeof loadingStates
   ) => {
     if (!solana.isReady) {
       setStatus("❌ Wallet not ready. Please connect your wallet.");
@@ -164,7 +190,7 @@ export const SPLProgramInteractions: React.FC = () => {
     }
 
     try {
-      setLoading(true);
+      setLoadingState(operationType, true);
       setStatus(`⏳ ${loadingMessage}...`);
       await operation();
     } catch (error) {
@@ -173,41 +199,42 @@ export const SPLProgramInteractions: React.FC = () => {
       setStatus(`❌ Error: ${errorMessage}`);
       console.error("Operation failed:", error);
     } finally {
-      setLoading(false);
+      setLoadingState(operationType, false);
     }
   };
 
-  // Token operations (keep all your existing functions)
+  // Token operations with specific loading states
   const handleCreateToken = async () => {
-    await executeWithLoading(async () => {
-      const decimalsNum = parseInt(decimals);
-      const amountNum = parseInt(amount);
+    await executeWithLoading(
+      async () => {
+        const decimalsNum = parseInt(decimals);
+        const amountNum = parseInt(amount);
 
-      if (isNaN(decimalsNum) || decimalsNum < 0 || decimalsNum > 9) {
-        throw new Error("Decimals must be a number between 0 and 9");
-      }
+        if (isNaN(decimalsNum) || decimalsNum < 0 || decimalsNum > 9) {
+          throw new Error("Decimals must be a number between 0 and 9");
+        }
 
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
+        if (isNaN(amountNum) || amountNum <= 0) {
+          throw new Error("Amount must be a positive number");
+        }
 
-      if (!tokenName || !symbol) {
-        throw new Error("Token name and symbol are required");
-      }
+        if (!tokenName || !symbol) {
+          throw new Error("Token name and symbol are required");
+        }
 
-      const form: CreateTokenForm = {
-        tokenName,
-        symbol,
-        metadata,
-        amount: amountNum,
-        decimals: decimalsNum,
-      };
+        const form: CreateTokenForm = {
+          tokenName,
+          symbol,
+          metadata,
+          amount: amountNum,
+          decimals: decimalsNum,
+        };
 
-      const result = await solana.createToken(form);
+        const result = await solana.createToken(form);
 
-      if (result.success) {
-        setTokenMint(result.signature);
-        setStatus(`✅ Token created successfully!
+        if (result.success) {
+          setTokenMint(result.signature);
+          setStatus(`✅ Token created successfully!
 
 Mint Address: ${result.signature}
 
@@ -219,10 +246,13 @@ To add your token to Phantom wallet:
 
 View on Solana Explorer:
 https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
-      } else {
-        handleResult(result, "");
-      }
-    }, "Creating token");
+        } else {
+          handleResult(result, "");
+        }
+      },
+      "Creating token",
+      "create"
+    );
   };
 
   const handleMintTokens = async () => {
@@ -231,15 +261,19 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
       return;
     }
 
-    await executeWithLoading(async () => {
-      const amountNum = parseFloat(mintAmount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
+    await executeWithLoading(
+      async () => {
+        const amountNum = parseFloat(mintAmount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+          throw new Error("Amount must be a positive number");
+        }
 
-      const result = await solana.mintTokens(tokenMint, amountNum);
-      handleResult(result, `Minted ${amountNum} tokens`);
-    }, "Minting tokens");
+        const result = await solana.mintTokens(tokenMint, amountNum);
+        handleResult(result, `Minted ${amountNum} tokens`);
+      },
+      "Minting tokens",
+      "mint"
+    );
   };
 
   const handleTransferTokens = async () => {
@@ -248,19 +282,23 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
       return;
     }
 
-    await executeWithLoading(async () => {
-      const amountNum = parseFloat(transferAmount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
+    await executeWithLoading(
+      async () => {
+        const amountNum = parseFloat(transferAmount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+          throw new Error("Amount must be a positive number");
+        }
 
-      const result = await solana.transferTokens(
-        tokenMint,
-        transferRecipient,
-        amountNum
-      );
-      handleResult(result, `Transferred ${amountNum} tokens`);
-    }, "Transferring tokens");
+        const result = await solana.transferTokens(
+          tokenMint,
+          transferRecipient,
+          amountNum
+        );
+        handleResult(result, `Transferred ${amountNum} tokens`);
+      },
+      "Transferring tokens",
+      "transfer"
+    );
   };
 
   const handleBurnTokens = async () => {
@@ -269,15 +307,19 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
       return;
     }
 
-    await executeWithLoading(async () => {
-      const amountNum = parseFloat(burnAmount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
+    await executeWithLoading(
+      async () => {
+        const amountNum = parseFloat(burnAmount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+          throw new Error("Amount must be a positive number");
+        }
 
-      const result = await solana.burnTokens(tokenMint, amountNum);
-      handleResult(result, `Burned ${amountNum} tokens`);
-    }, "Burning tokens");
+        const result = await solana.burnTokens(tokenMint, amountNum);
+        handleResult(result, `Burned ${amountNum} tokens`);
+      },
+      "Burning tokens",
+      "burn"
+    );
   };
 
   const isValidSolanaAddress = (address: string): boolean => {
@@ -304,20 +346,26 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
       return;
     }
 
-    await executeWithLoading(async () => {
-      const result = await solana.closeTokenAccount(mintAddress);
-      if (result.success) {
-        // Also remove from local storage if it's a created token
-        solana.removeCreatedTokenFromStorage(mintAddress);
-        setStatus(`✅ Token account closed successfully: ${result.signature}`);
-        // Refresh token history
-        setTimeout(() => {
-          loadTokenHistory();
-        }, 2000);
-      } else {
-        handleResult(result, "");
-      }
-    }, "Closing token account");
+    await executeWithLoading(
+      async () => {
+        const result = await solana.closeTokenAccount(mintAddress);
+        if (result.success) {
+          // Also remove from local storage if it's a created token
+          solana.removeCreatedTokenFromStorage(mintAddress);
+          setStatus(
+            `✅ Token account closed successfully: ${result.signature}`
+          );
+          // Refresh token history
+          setTimeout(() => {
+            loadTokenHistory();
+          }, 2000);
+        } else {
+          handleResult(result, "");
+        }
+      },
+      "Closing token account",
+      "closeAccount"
+    );
   };
 
   // Show loading state if wallet is not ready
@@ -379,12 +427,448 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                   weight="semibold"
                   className="ml-2"
                 >
-                  {solBalance.toFixed(4)} SOL
+                  {loadingStates.general ? (
+                    <span className="inline-flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                      Loading...
+                    </span>
+                  ) : (
+                    `${solBalance.toFixed(4)} SOL`
+                  )}
                 </Text>
               </div>
             </CardContent>
           )}
         </Card>
+
+        {/* Token History Section - Include the complete section from previous response */}
+        {/* ... Token History Section ... */}
+
+        {/* Token Creation */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                1. Create Token
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Create a new SPL token with metadata
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Token Name
+                  </Text>
+                </label>
+                <input
+                  type="text"
+                  value={tokenName}
+                  onChange={(e) => setTokenName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="My Token"
+                  disabled={loadingStates.create}
+                />
+              </div>
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Symbol
+                  </Text>
+                </label>
+                <input
+                  type="text"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="TKN"
+                  disabled={loadingStates.create}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block mb-2">
+                <Text variant="small" weight="medium">
+                  Metadata URL
+                </Text>
+              </label>
+              <input
+                type="text"
+                value={metadata}
+                onChange={(e) => setMetadata(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                placeholder="https://example.com/metadata.json"
+                disabled={loadingStates.create}
+              />
+              <Text variant="extraSmall" color="muted" className="mt-1">
+                JSON file with token metadata (name, symbol, image, description)
+              </Text>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Initial Amount
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="1000"
+                  disabled={loadingStates.create}
+                />
+              </div>
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Decimals
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={decimals}
+                  onChange={(e) => setDecimals(e.target.value)}
+                  min="0"
+                  max="9"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="9"
+                  disabled={loadingStates.create}
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleCreateToken}
+              disabled={loadingStates.create || !tokenName || !symbol}
+              className="w-full py-3 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            >
+              {loadingStates.create ? (
+                <span className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Creating Token...
+                </span>
+              ) : (
+                "Create Token"
+              )}
+            </Button>
+
+            {tokenMint && (
+              <div className="space-y-2 mt-4">
+                <Text variant="small" weight="medium">
+                  Token Mint Address:
+                </Text>
+                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-sm break-all">
+                  {tokenMint}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() =>
+                      window.open(
+                        `https://explorer.solana.com/address/${tokenMint}?cluster=devnet`,
+                        "_blank"
+                      )
+                    }
+                    variant="outline"
+                    size="sm"
+                  >
+                    View in Explorer
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(tokenMint);
+                      setStatus("✅ Token address copied to clipboard");
+                      setTimeout(() => {
+                        if (status.includes("Token address copied")) {
+                          setStatus("");
+                        }
+                      }, 3000);
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Copy Address
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Token Operations */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Mint Additional Tokens */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Text variant="h6" color="default">
+                  2. Mint Additional Tokens
+                </Text>
+              </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Mint more tokens to your wallet
+                </Text>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4" id="mint-section">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Amount to Mint
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={mintAmount}
+                  onChange={(e) => setMintAmount(e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="100"
+                  disabled={loadingStates.mint}
+                />
+              </div>
+              <Button
+                onClick={handleMintTokens}
+                disabled={loadingStates.mint || !tokenMint}
+                className="w-full"
+                variant="outline"
+              >
+                {loadingStates.mint ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Minting...
+                  </span>
+                ) : (
+                  "Mint Tokens"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Burn Tokens */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Text variant="h6" color="default">
+                  3. Burn Tokens
+                </Text>
+              </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Permanently destroy tokens
+                </Text>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Amount to Burn
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={burnAmount}
+                  onChange={(e) => setBurnAmount(e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="5"
+                  disabled={loadingStates.burn}
+                />
+              </div>
+              <Button
+                onClick={handleBurnTokens}
+                disabled={loadingStates.burn || !tokenMint}
+                variant="outline"
+                className="w-full border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                {loadingStates.burn ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Burning...
+                  </span>
+                ) : (
+                  "Burn Tokens"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Transfer Tokens */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                4. Transfer Tokens
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Send tokens to another Solana address
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Recipient Address
+                  </Text>
+                </label>
+                <input
+                  type="text"
+                  value={transferRecipient}
+                  onChange={(e) => setTransferRecipient(e.target.value)}
+                  placeholder="Enter Solana address"
+                  disabled={loadingStates.transfer}
+                  className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
+                    transferRecipient &&
+                    !isValidSolanaAddress(transferRecipient)
+                      ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                      : transferRecipient &&
+                        isValidSolanaAddress(transferRecipient)
+                      ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                      : "border-gray-300 dark:border-gray-600"
+                  }`}
+                />
+                {transferRecipient &&
+                  !isValidSolanaAddress(transferRecipient) && (
+                    <Text variant="extraSmall" color="error" className="mt-1">
+                      Invalid Solana address format
+                    </Text>
+                  )}
+              </div>
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Amount to Transfer
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="10"
+                  disabled={loadingStates.transfer}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handleTransferTokens}
+              disabled={
+                loadingStates.transfer ||
+                !tokenMint ||
+                !transferRecipient ||
+                !isValidSolanaAddress(transferRecipient)
+              }
+              className="w-full"
+            >
+              {loadingStates.transfer ? (
+                <span className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Transferring...
+                </span>
+              ) : (
+                "Transfer Tokens"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Token Information */}
+        {(tokenInfo || mintInfo) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Text variant="h5" color="default">
+                  Token Information
+                </Text>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Token Account Info */}
+                {tokenInfo && (
+                  <div className="space-y-3">
+                    <Text variant="h6" color="primary" weight="semibold">
+                      Your Token Account
+                    </Text>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Text variant="small" color="muted">
+                          Balance:
+                        </Text>
+                        <Text variant="body" weight="semibold">
+                          {tokenInfo.balance.toLocaleString()} tokens
+                        </Text>
+                      </div>
+                      <div>
+                        <Text variant="small" color="muted">
+                          Account Address:
+                        </Text>
+                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
+                          {tokenInfo.account}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mint Info */}
+                {mintInfo && (
+                  <div className="space-y-3">
+                    <Text variant="h6" color="primary" weight="semibold">
+                      Token Mint Information
+                    </Text>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Text variant="small" color="muted">
+                          Total Supply:
+                        </Text>
+                        <Text variant="body" weight="semibold">
+                          {mintInfo.supply.toLocaleString()} tokens
+                        </Text>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Text variant="small" color="muted">
+                          Decimals:
+                        </Text>
+                        <Text variant="body" weight="semibold">
+                          {mintInfo.decimals}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text variant="small" color="muted">
+                          Mint Authority:
+                        </Text>
+                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
+                          {mintInfo.mintAuthority || "None"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Token History Section */}
         <Card>
@@ -446,7 +930,14 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                 variant="outline"
                 size="sm"
               >
-                {loadingHistory ? "Loading..." : "Refresh"}
+                {loadingHistory ? (
+                  <span className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
+                    Loading...
+                  </span>
+                ) : (
+                  "Refresh"
+                )}
               </Button>
             </div>
 
@@ -702,6 +1193,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                               variant="outline"
                               size="sm"
                               className="flex items-center space-x-1"
+                              disabled={isAnyLoading}
                             >
                               <svg
                                 className="w-3 h-3"
@@ -794,6 +1286,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                                   variant="outline"
                                   size="sm"
                                   className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20 flex items-center space-x-1"
+                                  disabled={isAnyLoading}
                                 >
                                   <svg
                                     className="w-3 h-3"
@@ -823,21 +1316,25 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                               variant="outline"
                               size="sm"
                               className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 flex items-center space-x-1"
-                              disabled={loading}
+                              disabled={loadingStates.closeAccount}
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              {loadingStates.closeAccount ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
+                              ) : (
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              )}
                               <span>
                                 {activeHistoryTab === "created"
                                   ? "Remove"
@@ -914,6 +1411,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                       variant="outline"
                       size="sm"
                       className="flex items-center space-x-1"
+                      disabled={isAnyLoading}
                     >
                       <svg
                         className="w-3 h-3"
@@ -955,6 +1453,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                           variant="outline"
                           size="sm"
                           className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/20 flex items-center space-x-1"
+                          disabled={isAnyLoading}
                         >
                           <svg
                             className="w-3 h-3"
@@ -1003,6 +1502,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                       variant="outline"
                       size="sm"
                       className="flex items-center space-x-1"
+                      disabled={isAnyLoading}
                     >
                       <svg
                         className="w-3 h-3"
@@ -1024,395 +1524,6 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
               )}
           </CardContent>
         </Card>
-
-        {/* Token Creation */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                1. Create Token
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Create a new SPL token with metadata
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Token Name
-                  </Text>
-                </label>
-                <input
-                  type="text"
-                  value={tokenName}
-                  onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-                  placeholder="My Token"
-                />
-              </div>
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Symbol
-                  </Text>
-                </label>
-                <input
-                  type="text"
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-                  placeholder="TKN"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block mb-2">
-                <Text variant="small" weight="medium">
-                  Metadata URL
-                </Text>
-              </label>
-              <input
-                type="text"
-                value={metadata}
-                onChange={(e) => setMetadata(e.target.value)}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-                placeholder="https://example.com/metadata.json"
-              />
-              <Text variant="extraSmall" color="muted" className="mt-1">
-                JSON file with token metadata (name, symbol, image, description)
-              </Text>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Initial Amount
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="1"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-                  placeholder="1000"
-                />
-              </div>
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Decimals
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={decimals}
-                  onChange={(e) => setDecimals(e.target.value)}
-                  min="0"
-                  max="9"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-                  placeholder="9"
-                />
-              </div>
-            </div>
-
-            <Button
-              onClick={handleCreateToken}
-              disabled={loading || !tokenName || !symbol}
-              className="w-full py-3 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-            >
-              {loading ? "Creating Token..." : "Create Token"}
-            </Button>
-
-            {tokenMint && (
-              <div className="space-y-2 mt-4">
-                <Text variant="small" weight="medium">
-                  Current Token Mint Address:
-                </Text>
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-sm break-all">
-                  {tokenMint}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={() =>
-                      window.open(
-                        `https://explorer.solana.com/address/${tokenMint}?cluster=devnet`,
-                        "_blank"
-                      )
-                    }
-                    variant="outline"
-                    size="sm"
-                  >
-                    View in Explorer
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(tokenMint);
-                      setStatus("✅ Token address copied to clipboard");
-                      setTimeout(() => {
-                        if (status.includes("Token address copied")) {
-                          setStatus("");
-                        }
-                      }, 3000);
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Copy Address
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Token Operations */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Mint Additional Tokens */}
-          <Card id="mint-section">
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h6" color="default">
-                  2. Mint Additional Tokens
-                </Text>
-              </CardTitle>
-              <CardDescription>
-                <Text variant="small" color="muted">
-                  Mint more tokens to your wallet
-                </Text>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Amount to Mint
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={mintAmount}
-                  onChange={(e) => setMintAmount(e.target.value)}
-                  min="0"
-                  step="0.1"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                  placeholder="100"
-                />
-              </div>
-              <Button
-                onClick={handleMintTokens}
-                disabled={loading || !tokenMint}
-                className="w-full"
-                variant="outline"
-              >
-                {loading ? "Minting..." : "Mint Tokens"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Burn Tokens */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h6" color="default">
-                  3. Burn Tokens
-                </Text>
-              </CardTitle>
-              <CardDescription>
-                <Text variant="small" color="muted">
-                  Permanently destroy tokens
-                </Text>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Amount to Burn
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={burnAmount}
-                  onChange={(e) => setBurnAmount(e.target.value)}
-                  min="0"
-                  step="0.1"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                  placeholder="5"
-                />
-              </div>
-              <Button
-                onClick={handleBurnTokens}
-                disabled={loading || !tokenMint}
-                variant="outline"
-                className="w-full border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                {loading ? "Burning..." : "Burn Tokens"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Transfer Tokens */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                4. Transfer Tokens
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Send tokens to another Solana address
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Recipient Address
-                  </Text>
-                </label>
-                <input
-                  type="text"
-                  value={transferRecipient}
-                  onChange={(e) => setTransferRecipient(e.target.value)}
-                  placeholder="Enter Solana address"
-                  className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
-                    transferRecipient &&
-                    !isValidSolanaAddress(transferRecipient)
-                      ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                      : transferRecipient &&
-                        isValidSolanaAddress(transferRecipient)
-                      ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                      : "border-gray-300 dark:border-gray-600"
-                  }`}
-                />
-                {transferRecipient &&
-                  !isValidSolanaAddress(transferRecipient) && (
-                    <Text variant="extraSmall" color="error" className="mt-1">
-                      Invalid Solana address format
-                    </Text>
-                  )}
-              </div>
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Amount to Transfer
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
-                  min="0"
-                  step="0.1"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                  placeholder="10"
-                />
-              </div>
-            </div>
-            <Button
-              onClick={handleTransferTokens}
-              disabled={
-                loading ||
-                !tokenMint ||
-                !transferRecipient ||
-                !isValidSolanaAddress(transferRecipient)
-              }
-              className="w-full"
-            >
-              {loading ? "Transferring..." : "Transfer Tokens"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Token Information */}
-        {(tokenInfo || mintInfo) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h5" color="default">
-                  Current Token Information
-                </Text>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Token Account Info */}
-                {tokenInfo && (
-                  <div className="space-y-3">
-                    <Text variant="h6" color="primary" weight="semibold">
-                      Your Token Account
-                    </Text>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <Text variant="small" color="muted">
-                          Balance:
-                        </Text>
-                        <Text variant="body" weight="semibold">
-                          {tokenInfo.balance.toLocaleString()} tokens
-                        </Text>
-                      </div>
-                      <div>
-                        <Text variant="small" color="muted">
-                          Account Address:
-                        </Text>
-                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                          {tokenInfo.account}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mint Info */}
-                {mintInfo && (
-                  <div className="space-y-3">
-                    <Text variant="h6" color="primary" weight="semibold">
-                      Token Mint Information
-                    </Text>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <Text variant="small" color="muted">
-                          Total Supply:
-                        </Text>
-                        <Text variant="body" weight="semibold">
-                          {mintInfo.supply.toLocaleString()} tokens
-                        </Text>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <Text variant="small" color="muted">
-                          Decimals:
-                        </Text>
-                        <Text variant="body" weight="semibold">
-                          {mintInfo.decimals}
-                        </Text>
-                      </div>
-                      <div>
-                        <Text variant="small" color="muted">
-                          Mint Authority:
-                        </Text>
-                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 font-mono text-xs break-all">
-                          {mintInfo.mintAuthority || "None"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Status Display */}
         {status && (
@@ -1452,6 +1563,8 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
             </CardContent>
           </Card>
         )}
+
+      
       </div>
     </AuthGate>
   );
