@@ -19,9 +19,7 @@ import {
   getAccount,
   getMint,
 } from "@solana/spl-token";
-import {
-  createCreateMetadataAccountV3Instruction,
-} from "@metaplex-foundation/mpl-token-metadata";
+import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import {
   CreateTokenForm,
   TokenInfo,
@@ -30,7 +28,9 @@ import {
 } from "./spl.types";
 
 // Hardcoded Metaplex Token Metadata Program ID
-const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+const METADATA_PROGRAM_ID = new PublicKey(
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+);
 
 // Helper function to ensure wallet is connected
 const ensureWalletConnected = (publicKey: PublicKey | null) => {
@@ -58,7 +58,11 @@ export const getSOLBalance = async (
 export const createToken = async (
   connection: Connection,
   publicKey: PublicKey | null,
-  sendTransaction: (transaction: Transaction, connection: Connection, options?: any) => Promise<string>,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection,
+    options?: any
+  ) => Promise<string>,
   form: CreateTokenForm
 ): Promise<TransactionResult> => {
   try {
@@ -72,11 +76,11 @@ export const createToken = async (
 
     // Get minimum lamports for rent exemption
     const lamports = await getMinimumBalanceForRentExemptMint(connection);
-    
+
     // Generate a new keypair for the mint
     const mintKeypair = Keypair.generate();
     console.log("Generated mint keypair:", mintKeypair.publicKey.toBase58());
-    
+
     // Get associated token address
     const tokenATA = await getAssociatedTokenAddress(
       mintKeypair.publicKey,
@@ -159,9 +163,13 @@ export const createToken = async (
     );
 
     console.log("Sending transaction...");
-    const signature = await sendTransaction(createNewTokenTransaction, connection, {
-      signers: [mintKeypair],
-    });
+    const signature = await sendTransaction(
+      createNewTokenTransaction,
+      connection,
+      {
+        signers: [mintKeypair],
+      }
+    );
 
     console.log("Transaction signature:", signature);
 
@@ -183,7 +191,10 @@ export const createToken = async (
 export const mintTokens = async (
   connection: Connection,
   publicKey: PublicKey | null,
-  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
   mintAddress: string,
   amount: number
 ): Promise<TransactionResult> => {
@@ -206,12 +217,7 @@ export const mintTokens = async (
     const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
     const transaction = new Transaction().add(
-      createMintToInstruction(
-        mint,
-        tokenATA,
-        publicKey!,
-        amountWithDecimals
-      )
+      createMintToInstruction(mint, tokenATA, publicKey!, amountWithDecimals)
     );
 
     const signature = await sendTransaction(transaction, connection);
@@ -234,7 +240,10 @@ export const mintTokens = async (
 export const transferTokens = async (
   connection: Connection,
   publicKey: PublicKey | null,
-  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
   mintAddress: string,
   recipientAddress: string,
   amount: number
@@ -261,7 +270,31 @@ export const transferTokens = async (
     const mintInfo = await getMint(connection, mint);
     const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
-    const transaction = new Transaction().add(
+    // Check if destination token account exists
+    const destinationAccountInfo = await connection.getAccountInfo(
+      destinationATA
+    );
+
+    const transaction = new Transaction();
+
+    // If destination account doesn't exist, create it first
+    if (!destinationAccountInfo) {
+      console.log(
+        "Creating destination token account:",
+        destinationATA.toBase58()
+      );
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          publicKey!, // Payer
+          destinationATA, // Associated token account
+          recipient, // Owner
+          mint // Mint
+        )
+      );
+    }
+
+    // Add transfer instruction
+    transaction.add(
       createTransferInstruction(
         sourceATA,
         destinationATA,
@@ -290,7 +323,10 @@ export const transferTokens = async (
 export const burnTokens = async (
   connection: Connection,
   publicKey: PublicKey | null,
-  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
   mintAddress: string,
   amount: number
 ): Promise<TransactionResult> => {
@@ -313,12 +349,7 @@ export const burnTokens = async (
     const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
     const transaction = new Transaction().add(
-      createBurnInstruction(
-        tokenATA,
-        mint,
-        publicKey!,
-        amountWithDecimals
-      )
+      createBurnInstruction(tokenATA, mint, publicKey!, amountWithDecimals)
     );
 
     const signature = await sendTransaction(transaction, connection);
