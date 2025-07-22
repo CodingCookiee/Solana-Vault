@@ -83,9 +83,9 @@ export default function Home() {
           </section>
 
           {/* SPL Token Program Interactions */}
-          {/* <section>
+          <section>
             <ProgramInteractions />
-          </section> */}
+          </section>
 
           {/* Devnet Token Operations */}
           <section>

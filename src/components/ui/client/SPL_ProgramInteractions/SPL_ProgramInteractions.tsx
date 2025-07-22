@@ -1,12 +1,9 @@
 "use client";
 
+
 import React, { useState, useEffect } from "react";
-import { useSolanaInteractions } from "@/services/solana-interaction";
-import type {
-  TokenInfo,
-  TransactionResult,
-  MintInfo,
-} from "@/services/solana-interaction";
+import { useSplTokens } from "@/services/spl-tokens";
+import type { TokenInfo, TransactionResult, MintInfo } from "@/services/spl-tokens";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
 import {
   Card,
@@ -19,7 +16,7 @@ import {
 } from "@/components/ui/common";
 
 export const ProgramInteractions: React.FC = () => {
-  const solana = useSolanaInteractions();
+  const solana = useSplTokens();
 
   // State management
   const [loading, setLoading] = useState(false);
@@ -341,36 +338,6 @@ export const ProgramInteractions: React.FC = () => {
           </CardHeader>
         </Card>
 
-        {/* SOL Balance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                Wallet Overview
-              </Text>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div>
-                <Text variant="small" color="muted" weight="medium">
-                  SOL Balance
-                </Text>
-                <Text variant="h4" color="primary" weight="bold">
-                  {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : "---"}
-                </Text>
-              </div>
-              <Button
-                onClick={loadSOLBalance}
-                disabled={loading}
-                variant="outline"
-                size="sm"
-              >
-                Refresh
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Token Creation */}
         <Card>
