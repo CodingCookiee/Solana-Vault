@@ -7,6 +7,7 @@ import type {
   TokenInfo,
   TransactionResult,
   MintInfo,
+  CreatedToken,
 } from "@/services/spl-tokens";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
 import {
@@ -30,7 +31,9 @@ export const SPLProgramInteractions: React.FC = () => {
   // Token creation form
   const [tokenName, setTokenName] = useState<string>("My Token");
   const [symbol, setSymbol] = useState<string>("TKN");
-  const [metadata, setMetadata] = useState<string>("https://gist.githubusercontent.com/CodingCookiee/b5aeb8320b9ba6b9ca81d2ede30019fa/raw/f4ff185a9ecb44c5cf329a26924e274729202e7a/metadata.json");
+  const [metadata, setMetadata] = useState<string>(
+    "https://gist.githubusercontent.com/CodingCookiee/b5aeb8320b9ba6b9ca81d2ede30019fa/raw/f4ff185a9ecb44c5cf329a26924e274729202e7a/metadata.json"
+  );
   const [amount, setAmount] = useState<string>("1000");
   const [decimals, setDecimals] = useState<string>("9");
 
@@ -45,10 +48,19 @@ export const SPLProgramInteractions: React.FC = () => {
   const [transferAmount, setTransferAmount] = useState<string>("10");
   const [burnAmount, setBurnAmount] = useState<string>("5");
 
+  // Token history state
+  const [createdTokens, setCreatedTokens] = useState<CreatedToken[]>([]);
+  const [ownedTokens, setOwnedTokens] = useState<CreatedToken[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [activeHistoryTab, setActiveHistoryTab] = useState<"created" | "owned">(
+    "created"
+  );
+
   // Load initial data
   useEffect(() => {
     if (solana.connected && solana.isReady) {
       loadSOLBalance();
+      loadTokenHistory();
     }
   }, [solana.connected, solana.isReady]);
 
@@ -102,12 +114,36 @@ export const SPLProgramInteractions: React.FC = () => {
     }
   };
 
+  const loadTokenHistory = async () => {
+    if (!solana.isReady) return;
+
+    try {
+      setLoadingHistory(true);
+      const [created, owned] = await Promise.all([
+        solana.getCreatedTokens(),
+        solana.getOwnedTokens(),
+      ]);
+      setCreatedTokens(created);
+      setOwnedTokens(owned);
+    } catch (error) {
+      console.error("Error loading token history:", error);
+      setStatus(
+        `❌ Error loading token history: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const handleResult = (result: TransactionResult, successMessage: string) => {
     if (result.success) {
       setStatus(`✅ ${successMessage}: ${result.signature}`);
       // Refresh data
       setTimeout(() => {
         loadSOLBalance();
+        loadTokenHistory(); // Refresh token history
         if (tokenMint) {
           loadTokenInfo();
           loadMintInfo();
@@ -141,7 +177,7 @@ export const SPLProgramInteractions: React.FC = () => {
     }
   };
 
-  // Token operations
+  // Token operations (keep all your existing functions)
   const handleCreateToken = async () => {
     await executeWithLoading(async () => {
       const decimalsNum = parseInt(decimals);
@@ -309,12 +345,236 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                 <Text variant="small" color="muted">
                   Current SOL Balance:
                 </Text>
-                <Text variant="h6" color="primary" weight="semibold" className="ml-2">
+                <Text
+                  variant="h6"
+                  color="primary"
+                  weight="semibold"
+                  className="ml-2"
+                >
                   {solBalance.toFixed(4)} SOL
                 </Text>
               </div>
             </CardContent>
           )}
+        </Card>
+
+        {/* Token History Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                Token History
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                View tokens you've created and tokens you own
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveHistoryTab("created")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  activeHistoryTab === "created"
+                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
+              >
+                Created Tokens ({createdTokens.length})
+              </button>
+              <button
+                onClick={() => setActiveHistoryTab("owned")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  activeHistoryTab === "owned"
+                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
+              >
+                Owned Tokens ({ownedTokens.length})
+              </button>
+            </div>
+
+            {/* Refresh Button */}
+            <div className="flex justify-between items-center mb-4">
+              <Text variant="small" color="muted">
+                {activeHistoryTab === "created"
+                  ? "Tokens where you are the mint authority"
+                  : "Tokens you currently hold"}
+              </Text>
+              <Button
+                onClick={loadTokenHistory}
+                disabled={loadingHistory}
+                variant="outline"
+                size="sm"
+              >
+                {loadingHistory ? "Loading..." : "Refresh"}
+              </Button>
+            </div>
+
+            {/* Token List */}
+            <div className="space-y-3">
+              {loadingHistory ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <Text variant="small" color="muted">
+                    Loading token history...
+                  </Text>
+                </div>
+              ) : (
+                <>
+                  {(activeHistoryTab === "created"
+                    ? createdTokens
+                    : ownedTokens
+                  ).length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Text variant="body" color="muted">
+                        {activeHistoryTab === "created"
+                          ? "No tokens created yet. Create your first token above!"
+                          : "No tokens owned yet. Create or receive some tokens!"}
+                      </Text>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {(activeHistoryTab === "created"
+                        ? createdTokens
+                        : ownedTokens
+                      ).map((token) => (
+                        <div
+                          key={token.mintAddress}
+                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div>
+                                  <Text variant="h6" weight="semibold">
+                                    {token.name}
+                                  </Text>
+                                  <Text variant="small" color="muted">
+                                    {token.symbol} • {token.decimals} decimals
+                                  </Text>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 mb-3">
+                                <div>
+                                  <Text variant="extraSmall" color="muted">
+                                    Total Supply
+                                  </Text>
+                                  <Text variant="small" weight="medium">
+                                    {token.totalSupply.toLocaleString()}{" "}
+                                    {token.symbol}
+                                  </Text>
+                                </div>
+                                {token.userBalance !== undefined && (
+                                  <div>
+                                    <Text variant="extraSmall" color="muted">
+                                      Your Balance
+                                    </Text>
+                                    <Text variant="small" weight="medium">
+                                      {token.userBalance.toLocaleString()}{" "}
+                                      {token.symbol}
+                                    </Text>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="mb-3">
+                                <Text variant="extraSmall" color="muted">
+                                  Mint Address
+                                </Text>
+                                <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono break-all">
+                                  {token.mintAddress}
+                                </div>
+                              </div>
+
+                              {token.metadata?.uri && (
+                                <div className="mb-3">
+                                  <Text variant="extraSmall" color="muted">
+                                    Metadata URI
+                                  </Text>
+                                  <a
+                                    href={token.metadata.uri}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline text-xs break-all"
+                                  >
+                                    {token.metadata.uri}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            <Button
+                              onClick={() => setTokenMint(token.mintAddress)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Use for Operations
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                window.open(
+                                  `https://explorer.solana.com/address/${token.mintAddress}?cluster=devnet`,
+                                  "_blank"
+                                )
+                              }
+                              variant="outline"
+                              size="sm"
+                            >
+                              View in Explorer
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  token.mintAddress
+                                );
+                                setStatus(
+                                  "✅ Token address copied to clipboard"
+                                );
+                                setTimeout(() => {
+                                  if (status.includes("Token address copied")) {
+                                    setStatus("");
+                                  }
+                                }, 3000);
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Copy Address
+                            </Button>
+                            {activeHistoryTab === "created" &&
+                              token.mintAuthority ===
+                                solana.publicKey?.toBase58() && (
+                                <Button
+                                  onClick={() => {
+                                    setTokenMint(token.mintAddress);
+                                    // Scroll to mint section
+                                    document
+                                      .getElementById("mint-section")
+                                      ?.scrollIntoView({ behavior: "smooth" });
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20"
+                                >
+                                  Mint More
+                                </Button>
+                              )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
         </Card>
 
         {/* Token Creation */}
@@ -426,13 +686,13 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
             {tokenMint && (
               <div className="space-y-2 mt-4">
                 <Text variant="small" weight="medium">
-                  Token Mint Address:
+                  Current Token Mint Address:
                 </Text>
                 <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-sm break-all">
                   {tokenMint}
                 </div>
                 <div className="flex space-x-2">
-                                   <Button
+                  <Button
                     onClick={() =>
                       window.open(
                         `https://explorer.solana.com/address/${tokenMint}?cluster=devnet`,
@@ -468,7 +728,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
         {/* Token Operations */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Mint Additional Tokens */}
-          <Card>
+          <Card id="mint-section">
             <CardHeader>
               <CardTitle>
                 <Text variant="h6" color="default">
@@ -634,7 +894,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
             <CardHeader>
               <CardTitle>
                 <Text variant="h5" color="default">
-                  Token Information
+                  Current Token Information
                 </Text>
               </CardTitle>
             </CardHeader>
@@ -721,7 +981,11 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
               >
                 <div className="flex items-start space-x-3">
                   <div className="flex-1">
-                    <Text variant="small" weight="medium" className="whitespace-pre-line break-all">
+                    <Text
+                      variant="small"
+                      weight="medium"
+                      className="whitespace-pre-line break-all"
+                    >
                       {status}
                     </Text>
                   </div>
@@ -741,7 +1005,6 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
           </Card>
         )}
 
-        
       </div>
     </AuthGate>
   );

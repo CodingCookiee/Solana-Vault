@@ -29,6 +29,28 @@ export interface MintInfo {
   freezeAuthority: string | null;
 }
 
+export interface TokenMetadata {
+  name: string;
+  symbol: string;
+  description?: string;
+  image?: string;
+  uri?: string;
+}
+
+export interface CreatedToken {
+  mintAddress: string;
+  name?: string;
+  symbol?: string;
+  decimals: number;
+  totalSupply: number;
+  mintAuthority: string | null;
+  freezeAuthority: string | null;
+  createdAt?: Date;
+  metadata?: TokenMetadata;
+  userBalance?: number;
+  tokenAccount?: string;
+}
+
 export interface SplTokenServiceState {
   connected: boolean;
   publicKey: PublicKey | null;

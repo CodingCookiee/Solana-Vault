@@ -5,6 +5,7 @@ import {
   Transaction,
   Keypair,
   SystemProgram,
+  GetProgramAccountsFilter,
 } from "@solana/web3.js";
 import {
   MINT_SIZE,
@@ -18,13 +19,20 @@ import {
   createBurnInstruction,
   getAccount,
   getMint,
+  AccountLayout,
+  MintLayout,
 } from "@solana/spl-token";
-import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
+import {
+  createCreateMetadataAccountV3Instruction,
+
+} from "@metaplex-foundation/mpl-token-metadata";
 import {
   CreateTokenForm,
   TokenInfo,
   TransactionResult,
   MintInfo,
+  CreatedToken,
+  TokenMetadata,
 } from "./spl.types";
 
 // Hardcoded Metaplex Token Metadata Program ID
@@ -422,5 +430,247 @@ export const getMintInfo = async (
   } catch (error) {
     console.error("Error getting mint info:", error);
     return null;
+  }
+};
+
+// Get token metadata from Metaplex
+export const getTokenMetadata = async (
+  connection: Connection,
+  mintAddress: string
+): Promise<TokenMetadata | null> => {
+  try {
+    const mint = new PublicKey(mintAddress);
+
+    // Find metadata PDA
+    const [metadataPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        METADATA_PROGRAM_ID.toBuffer(),
+        mint.toBuffer(),
+      ],
+      METADATA_PROGRAM_ID
+    );
+
+    // Get metadata account
+    const metadataAccount = await connection.getAccountInfo(metadataPDA);
+
+    if (!metadataAccount) {
+      return null;
+    }
+
+    // Parse metadata (simplified parsing)
+    const data = metadataAccount.data;
+
+    // Skip the first 1 byte (key) + 32 bytes (update authority) + 32 bytes (mint)
+    let offset = 1 + 32 + 32;
+
+    // Read name length and name
+    const nameLength = data.readUInt32LE(offset);
+    offset += 4;
+    const name = data
+      .slice(offset, offset + nameLength)
+      .toString("utf8")
+      .replace(/\0/g, "");
+    offset += nameLength;
+
+    // Read symbol length and symbol
+    const symbolLength = data.readUInt32LE(offset);
+    offset += 4;
+    const symbol = data
+      .slice(offset, offset + symbolLength)
+      .toString("utf8")
+      .replace(/\0/g, "");
+    offset += symbolLength;
+
+    // Read URI length and URI
+    const uriLength = data.readUInt32LE(offset);
+    offset += 4;
+    const uri = data
+      .slice(offset, offset + uriLength)
+      .toString("utf8")
+      .replace(/\0/g, "");
+
+    return {
+      name: name.trim(),
+      symbol: symbol.trim(),
+      uri: uri.trim(),
+    };
+  } catch (error) {
+    console.error("Error getting token metadata:", error);
+    return null;
+  }
+};
+
+// Get all tokens created by the user (where they are mint authority)
+export const getCreatedTokens = async (
+  connection: Connection,
+  publicKey: PublicKey | null
+): Promise<CreatedToken[]> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    console.log("Fetching created tokens for:", publicKey!.toBase58());
+
+    // Get all mint accounts where the user is the mint authority
+    const filters: GetProgramAccountsFilter[] = [
+      {
+        dataSize: MINT_SIZE, // Filter for mint accounts
+      },
+      {
+        memcmp: {
+          offset: 4, // Mint authority is at offset 4
+          bytes: publicKey!.toBase58(),
+        },
+      },
+    ];
+
+    const mintAccounts = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
+      filters,
+    });
+
+    console.log(`Found ${mintAccounts.length} mint accounts`);
+
+    const createdTokens: CreatedToken[] = [];
+
+    for (const { pubkey: mintPubkey, account } of mintAccounts) {
+      try {
+        // Parse mint data
+        const mintData = MintLayout.decode(account.data);
+
+        // Skip if not a valid mint or user is not the authority
+        if (
+          !mintData.mintAuthority ||
+          !mintData.mintAuthority.equals(publicKey!)
+        ) {
+          continue;
+        }
+
+        const mintAddress = mintPubkey.toBase58();
+
+        // Get mint info
+        const mintInfo = await getMint(connection, mintPubkey);
+
+        // Get metadata
+        const metadata = await getTokenMetadata(connection, mintAddress);
+
+        // Get user's token balance
+        let userBalance = 0;
+        let tokenAccount = "";
+
+        try {
+          const userATA = await getAssociatedTokenAddress(
+            mintPubkey,
+            publicKey!
+          );
+          const accountInfo = await getAccount(connection, userATA);
+          userBalance =
+            Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals);
+          tokenAccount = userATA.toBase58();
+        } catch (error) {
+          // User doesn't have a token account for this mint
+          console.log(`No token account found for mint ${mintAddress}`);
+        }
+
+        const createdToken: CreatedToken = {
+          mintAddress,
+          name: metadata?.name || "Unknown Token",
+          symbol: metadata?.symbol || "UNK",
+          decimals: mintInfo.decimals,
+          totalSupply:
+            Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
+          mintAuthority: mintInfo.mintAuthority?.toBase58() || null,
+          freezeAuthority: mintInfo.freezeAuthority?.toBase58() || null,
+          metadata,
+          userBalance,
+          tokenAccount,
+        };
+
+        createdTokens.push(createdToken);
+      } catch (error) {
+        console.error(`Error processing mint ${mintPubkey.toBase58()}:`, error);
+        continue;
+      }
+    }
+
+    console.log(`Successfully processed ${createdTokens.length} tokens`);
+    return createdTokens.sort((a, b) => b.totalSupply - a.totalSupply); // Sort by supply descending
+  } catch (error) {
+    console.error("Error getting created tokens:", error);
+    return [];
+  }
+};
+
+// Get all tokens the user owns (has balance > 0)
+export const getOwnedTokens = async (
+  connection: Connection,
+  publicKey: PublicKey | null
+): Promise<CreatedToken[]> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    console.log("Fetching owned tokens for:", publicKey!.toBase58());
+
+    // Get all token accounts owned by the user
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      publicKey!,
+      {
+        programId: TOKEN_PROGRAM_ID,
+      }
+    );
+
+    console.log(`Found ${tokenAccounts.value.length} token accounts`);
+
+    const ownedTokens: CreatedToken[] = [];
+
+    for (const { pubkey: tokenAccountPubkey, account } of tokenAccounts.value) {
+      try {
+        const parsedInfo = account.data.parsed.info;
+        const mintAddress = parsedInfo.mint;
+        const balance = parseFloat(parsedInfo.tokenAmount.uiAmount || "0");
+
+        // Skip if balance is 0
+        if (balance === 0) {
+          continue;
+        }
+
+        const mint = new PublicKey(mintAddress);
+
+        // Get mint info
+        const mintInfo = await getMint(connection, mint);
+
+        // Get metadata
+        const metadata = await getTokenMetadata(connection, mintAddress);
+
+        const ownedToken: CreatedToken = {
+          mintAddress,
+          name: metadata?.name || "Unknown Token",
+          symbol: metadata?.symbol || "UNK",
+          decimals: mintInfo.decimals,
+          totalSupply:
+            Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
+          mintAuthority: mintInfo.mintAuthority?.toBase58() || null,
+          freezeAuthority: mintInfo.freezeAuthority?.toBase58() || null,
+          metadata,
+          userBalance: balance,
+          tokenAccount: tokenAccountPubkey.toBase58(),
+        };
+
+        ownedTokens.push(ownedToken);
+      } catch (error) {
+        console.error(
+          `Error processing token account ${tokenAccountPubkey.toBase58()}:`,
+          error
+        );
+        continue;
+      }
+    }
+
+    console.log(`Successfully processed ${ownedTokens.length} owned tokens`);
+    return ownedTokens.sort(
+      (a, b) => (b.userBalance || 0) - (a.userBalance || 0)
+    ); // Sort by balance descending
+  } catch (error) {
+    console.error("Error getting owned tokens:", error);
+    return [];
   }
 };

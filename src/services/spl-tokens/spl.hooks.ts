@@ -1,6 +1,6 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as SplService from "./spl.service";
-import { CreateTokenForm } from "./spl.types";
+import { CreateTokenForm, CreatedToken } from "./spl.types";
 
 export const useSplTokens = () => {
   const { connection } = useConnection();
@@ -76,6 +76,22 @@ export const useSplTokens = () => {
     getMintInfo: (mintAddress: string) => {
       if (!connection) throw new Error("Connection not ready");
       return SplService.getMintInfo(connection, mintAddress);
+    },
+
+    // New token history functions
+    getCreatedTokens: () => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.getCreatedTokens(connection, wallet.publicKey);
+    },
+
+    getOwnedTokens: () => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.getOwnedTokens(connection, wallet.publicKey);
+    },
+
+    getTokenMetadata: (mintAddress: string) => {
+      if (!connection) throw new Error("Connection not ready");
+      return SplService.getTokenMetadata(connection, mintAddress);
     },
 
     // Wallet state
