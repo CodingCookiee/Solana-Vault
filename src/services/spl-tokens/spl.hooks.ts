@@ -1,55 +1,42 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import {
-  SplTokenServiceState,
-  TokenInfo,
-  TransactionResult,
-  MintInfo,
-  CreateTokenOptions,
-} from "./spl.types";
 import * as SplService from "./spl.service";
+import { CreateTokenForm } from "./spl.types";
 
 export const useSplTokens = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
 
-  // Add safety checks
-  const isReady = connection && wallet && wallet.publicKey;
+  const isReady =
+    connection && wallet && wallet.publicKey && wallet.sendTransaction;
 
   return {
-    // Service functions with safety checks
+    // Service functions
     getSOLBalance: () => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.getSOLBalance(connection, wallet.publicKey);
     },
-    createToken: (options?: CreateTokenOptions) => {
+
+    createToken: (form: CreateTokenForm) => {
       if (!isReady) throw new Error("Wallet not ready");
-      return SplService.createToken(connection, wallet, options);
-    },
-    createTokenAccount: (mintAddress: string) => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.createTokenAccount(connection, wallet, mintAddress);
-    },
-    getAssociatedTokenAddress: (mintAddress: string) => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.getAssociatedTokenAddressForWallet(
-        mintAddress,
-        wallet.publicKey
+      return SplService.createToken(
+        connection,
+        wallet.publicKey,
+        wallet.sendTransaction!,
+        form
       );
     },
-    mintTokens: (
-      mintAddress: string,
-      amount: number,
-      destinationAddress?: string
-    ) => {
+
+    mintTokens: (mintAddress: string, amount: number) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.mintTokens(
         connection,
-        wallet,
+        wallet.publicKey,
+        wallet.sendTransaction!,
         mintAddress,
-        amount,
-        destinationAddress
+        amount
       );
     },
+
     transferTokens: (
       mintAddress: string,
       recipientAddress: string,
@@ -58,34 +45,25 @@ export const useSplTokens = () => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.transferTokens(
         connection,
-        wallet,
+        wallet.publicKey,
+        wallet.sendTransaction!,
         mintAddress,
         recipientAddress,
         amount
       );
     },
+
     burnTokens: (mintAddress: string, amount: number) => {
       if (!isReady) throw new Error("Wallet not ready");
-      return SplService.burnTokens(connection, wallet, mintAddress, amount);
-    },
-    approveTokens: (
-      mintAddress: string,
-      delegateAddress: string,
-      amount: number
-    ) => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.approveTokens(
+      return SplService.burnTokens(
         connection,
-        wallet,
+        wallet.publicKey,
+        wallet.sendTransaction!,
         mintAddress,
-        delegateAddress,
         amount
       );
     },
-    revokeApproval: (mintAddress: string) => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.revokeApproval(connection, wallet, mintAddress);
-    },
+
     getTokenAccountInfo: (mintAddress: string) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.getTokenAccountInfo(
@@ -94,23 +72,16 @@ export const useSplTokens = () => {
         mintAddress
       );
     },
+
     getMintInfo: (mintAddress: string) => {
       if (!connection) throw new Error("Connection not ready");
       return SplService.getMintInfo(connection, mintAddress);
     },
-    tokenAccountExists: (mintAddress: string) => {
-      if (!isReady) throw new Error("Wallet not ready");
-      return SplService.tokenAccountExists(
-        connection,
-        wallet.publicKey,
-        mintAddress
-      );
-    },
 
-    // Wallet info with safety checks
+    // Wallet state
     connected: wallet?.connected || false,
     publicKey: wallet?.publicKey || null,
     connecting: wallet?.connecting || false,
-    isReady,
+    isReady: !!isReady,
   } as const;
 };

@@ -7,57 +7,35 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 import {
-  createMint,
-  createAssociatedTokenAccount,
-  getAssociatedTokenAddress,
-  mintTo,
-  transfer,
-  burn,
-  approve,
-  revoke,
-  getAccount,
-  getMint,
-  TOKEN_PROGRAM_ID,
   MINT_SIZE,
+  TOKEN_PROGRAM_ID,
   createInitializeMintInstruction,
+  getMinimumBalanceForRentExemptMint,
+  getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
   createTransferInstruction,
   createBurnInstruction,
-  createApproveInstruction,
-  createRevokeInstruction,
-  getAssociatedTokenAddressSync,
+  getAccount,
+  getMint,
 } from "@solana/spl-token";
 import {
+  createCreateMetadataAccountV3Instruction,
+} from "@metaplex-foundation/mpl-token-metadata";
+import {
+  CreateTokenForm,
   TokenInfo,
   TransactionResult,
   MintInfo,
-  SolanaWallet,
-  CreateTokenOptions,
-  TokenMetadata,
 } from "./spl.types";
 
-// For Metaplex Token Metadata
-import {
-  createCreateMetadataAccountV3Instruction,
-  PROGRAM_ID as METADATA_PROGRAM_ID,
-} from "@metaplex-foundation/mpl-token-metadata";
+// Hardcoded Metaplex Token Metadata Program ID
+const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
 // Helper function to ensure wallet is connected
-export const ensureWalletConnected = (publicKey: PublicKey | null) => {
+const ensureWalletConnected = (publicKey: PublicKey | null) => {
   if (!publicKey) {
     throw new Error("Wallet not connected");
-  }
-};
-
-// Helper function to safely convert PublicKey to string
-export const safeToBase58 = (publicKey: PublicKey | null): string => {
-  if (!publicKey) return "";
-  try {
-    return publicKey.toBase58();
-  } catch (error) {
-    console.error("Error converting PublicKey to base58:", error);
-    return "";
   }
 };
 
@@ -76,171 +54,119 @@ export const getSOLBalance = async (
   }
 };
 
-// Helper function to derive metadata PDA
-const findMetadataPda = (mint: PublicKey): PublicKey => {
-  // Hardcoded Metaplex Token Metadata Program ID for when the import fails
-  const metaplexProgramId = new PublicKey(
-    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-  );
-
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("metadata"), metaplexProgramId.toBuffer(), mint.toBuffer()],
-    metaplexProgramId
-  );
-  return pda;
-};
-
-// Convert file to data URL
-const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
-
-// Create metadata JSON for token
-const createTokenMetadataJSON = async (
-  metadata: TokenMetadata
-): Promise<string> => {
-  const metadataJson: Record<string, any> = {
-    name: metadata.name,
-    symbol: metadata.symbol,
-    description: metadata.description || `A ${metadata.name} token`,
-  };
-
-  // Handle image (could be URL, File, or null)
-  if (metadata.image) {
-    if (typeof metadata.image === "string") {
-      metadataJson.image = metadata.image;
-    } else if (metadata.image instanceof File) {
-      // Convert file to data URL
-      metadataJson.image = await fileToDataUrl(metadata.image);
-    }
-  }
-
-  return JSON.stringify(metadataJson);
-};
-
-// Create a new SPL token with metadata
+// Create a new SPL token with metadata (following the working example)
 export const createToken = async (
   connection: Connection,
-  wallet: SolanaWallet,
-  options: CreateTokenOptions = {}
+  publicKey: PublicKey | null,
+  sendTransaction: (transaction: Transaction, connection: Connection, options?: any) => Promise<string>,
+  form: CreateTokenForm
 ): Promise<TransactionResult> => {
   try {
-    ensureWalletConnected(wallet.publicKey);
+    ensureWalletConnected(publicKey);
 
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
+    if (!form.tokenName || !form.symbol) {
+      throw new Error("Token name and symbol are required");
     }
 
-    const decimals = options.decimals ?? 9;
+    console.log("Creating token with form:", form);
 
+    // Get minimum lamports for rent exemption
+    const lamports = await getMinimumBalanceForRentExemptMint(connection);
+    
     // Generate a new keypair for the mint
     const mintKeypair = Keypair.generate();
+    console.log("Generated mint keypair:", mintKeypair.publicKey.toBase58());
+    
+    // Get associated token address
+    const tokenATA = await getAssociatedTokenAddress(
+      mintKeypair.publicKey,
+      publicKey!
+    );
+    console.log("Token ATA:", tokenATA.toBase58());
 
-    // Calculate minimum lamports needed for mint account
-    const mintLamports = await connection.getMinimumBalanceForRentExemption(
-      MINT_SIZE
+    // Create metadata PDA
+    const [metadataPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        METADATA_PROGRAM_ID.toBuffer(),
+        mintKeypair.publicKey.toBuffer(),
+      ],
+      METADATA_PROGRAM_ID
     );
 
-    // Create transaction
-    const transaction = new Transaction();
+    console.log("Metadata PDA:", metadataPDA.toBase58());
 
-    // Add instruction to create mint account
-    transaction.add(
+    // Create metadata instruction
+    const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
+      {
+        metadata: metadataPDA,
+        mint: mintKeypair.publicKey,
+        mintAuthority: publicKey!,
+        payer: publicKey!,
+        updateAuthority: publicKey!,
+      },
+      {
+        createMetadataAccountArgsV3: {
+          data: {
+            name: form.tokenName,
+            symbol: form.symbol,
+            uri: form.metadata,
+            creators: null,
+            sellerFeeBasisPoints: 0,
+            uses: null,
+            collection: null,
+          },
+          isMutable: true,
+          collectionDetails: null,
+        },
+      }
+    );
+
+    // Create the complete transaction with all instructions
+    const createNewTokenTransaction = new Transaction().add(
+      // Create mint account
       SystemProgram.createAccount({
-        fromPubkey: wallet.publicKey!,
+        fromPubkey: publicKey!,
         newAccountPubkey: mintKeypair.publicKey,
         space: MINT_SIZE,
-        lamports: mintLamports,
+        lamports: lamports,
         programId: TOKEN_PROGRAM_ID,
       }),
       // Initialize mint
       createInitializeMintInstruction(
-        mintKeypair.publicKey, // Mint account
-        decimals, // Decimals
-        wallet.publicKey!, // Mint authority
-        wallet.publicKey! // Freeze authority (optional)
-      )
-    );
-
-    // If metadata is provided, add metadata instruction
-    if (options.metadata) {
-      const metadata = options.metadata;
-
-      try {
-        // Create metadata PDA
-        const metadataPDA = findMetadataPda(mintKeypair.publicKey);
-
-        // Generate URI with inline data if no URI is provided
-        let uri = metadata.uri || "";
-        if (!uri && metadata.image) {
-          // Create a simple JSON metadata with the image
-          const metadataJSON = await createTokenMetadataJSON(metadata);
-          uri = `data:application/json,${encodeURIComponent(metadataJSON)}`;
-        }
-
-        // Create metadata instruction
-        const metadataInstruction = createCreateMetadataAccountV3Instruction(
-          {
-            metadata: metadataPDA,
-            mint: mintKeypair.publicKey,
-            mintAuthority: wallet.publicKey!,
-            payer: wallet.publicKey!,
-            updateAuthority: wallet.publicKey!,
-          },
-          {
-            createMetadataAccountArgsV3: {
-              data: {
-                name: metadata.name,
-                symbol: metadata.symbol,
-                uri: uri,
-                sellerFeeBasisPoints: metadata.sellerFeeBasisPoints || 0,
-                creators: null,
-                collection: null,
-                uses: null,
-              },
-              isMutable: true,
-              collectionDetails: null,
-            },
-          }
-        );
-
-        transaction.add(metadataInstruction);
-      } catch (error) {
-        console.error("Error creating metadata:", error);
-        // Continue without metadata if there's an error
-      }
-    }
-
-    // Create an associated token account for the user
-    const associatedTokenAddress = getAssociatedTokenAddressSync(
-      mintKeypair.publicKey,
-      wallet.publicKey!
-    );
-
-    transaction.add(
+        mintKeypair.publicKey,
+        form.decimals,
+        publicKey!,
+        publicKey!,
+        TOKEN_PROGRAM_ID
+      ),
+      // Create associated token account
       createAssociatedTokenAccountInstruction(
-        wallet.publicKey!, // Payer
-        associatedTokenAddress, // Associated token account
-        wallet.publicKey!, // Owner
-        mintKeypair.publicKey // Mint
-      )
+        publicKey!,
+        tokenATA,
+        publicKey!,
+        mintKeypair.publicKey
+      ),
+      // Mint tokens
+      createMintToInstruction(
+        mintKeypair.publicKey,
+        tokenATA,
+        publicKey!,
+        form.amount * Math.pow(10, form.decimals)
+      ),
+      // Add metadata
+      createMetadataInstruction
     );
 
-    // Send transaction with the mint keypair as signer
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    console.log("Sending transaction...");
+    const signature = await sendTransaction(createNewTokenTransaction, connection, {
       signers: [mintKeypair],
     });
 
-    // Confirm transaction
-    await connection.confirmTransaction(signature, "confirmed");
+    console.log("Transaction signature:", signature);
 
     return {
-      signature: mintKeypair.publicKey.toBase58(), // Return mint address, not transaction signature
+      signature: mintKeypair.publicKey.toBase58(), // Return mint address
       success: true,
     };
   } catch (error) {
@@ -253,102 +179,19 @@ export const createToken = async (
   }
 };
 
-// Create associated token account
-export const createTokenAccount = async (
+// Mint additional tokens
+export const mintTokens = async (
   connection: Connection,
-  wallet: SolanaWallet,
-  mintAddress: string
-): Promise<TransactionResult> => {
-  try {
-    ensureWalletConnected(wallet.publicKey);
-
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
-    }
-
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    const mint = new PublicKey(mintAddress);
-    const associatedTokenAddress = getAssociatedTokenAddressSync(
-      mint,
-      wallet.publicKey!
-    );
-
-    // Check if account already exists
-    const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
-    if (accountInfo) {
-      return {
-        signature: associatedTokenAddress.toBase58(),
-        success: true,
-      };
-    }
-
-    // Create transaction
-    const transaction = new Transaction().add(
-      createAssociatedTokenAccountInstruction(
-        wallet.publicKey!, // Payer
-        associatedTokenAddress, // Associated token account
-        wallet.publicKey!, // Owner
-        mint // Mint
-      )
-    );
-
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
-
-    return {
-      signature: associatedTokenAddress.toBase58(),
-      success: true,
-    };
-  } catch (error) {
-    console.error("Error creating token account:", error);
-    return {
-      signature: "",
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-};
-
-// Get associated token address
-export const getAssociatedTokenAddressForWallet = async (
+  publicKey: PublicKey | null,
+  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
   mintAddress: string,
-  publicKey: PublicKey | null
-): Promise<string> => {
+  amount: number
+): Promise<TransactionResult> => {
   try {
     ensureWalletConnected(publicKey);
 
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
-    }
-
-    const mint = new PublicKey(mintAddress);
-    const associatedTokenAddress = await getAssociatedTokenAddress(
-      mint,
-      publicKey!
-    );
-    return safeToBase58(associatedTokenAddress);
-  } catch (error) {
-    console.error("Error getting associated token address:", error);
-    throw error;
-  }
-};
-
-// Mint tokens to an account
-export const mintTokens = async (
-  connection: Connection,
-  wallet: SolanaWallet,
-  mintAddress: string,
-  amount: number,
-  destinationAddress?: string
-): Promise<TransactionResult> => {
-  try {
-    ensureWalletConnected(wallet.publicKey);
-
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
+    if (!mintAddress) {
+      throw new Error("Mint address is required");
     }
 
     if (amount <= 0) {
@@ -356,31 +199,22 @@ export const mintTokens = async (
     }
 
     const mint = new PublicKey(mintAddress);
+    const tokenATA = await getAssociatedTokenAddress(mint, publicKey!);
 
-    // If no destination provided, use wallet's associated token account
-    let destination: PublicKey;
-    if (destinationAddress) {
-      destination = new PublicKey(destinationAddress);
-    } else {
-      destination = await getAssociatedTokenAddress(mint, wallet.publicKey!);
-    }
+    // Get mint info to determine decimals
+    const mintInfo = await getMint(connection, mint);
+    const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    // Create transaction with mint instruction
     const transaction = new Transaction().add(
       createMintToInstruction(
-        mint, // Mint
-        destination, // Destination
-        wallet.publicKey!, // Authority
-        amount // Amount (in smallest unit)
+        mint,
+        tokenATA,
+        publicKey!,
+        amountWithDecimals
       )
     );
 
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
+    const signature = await sendTransaction(transaction, connection);
 
     return {
       signature,
@@ -399,20 +233,17 @@ export const mintTokens = async (
 // Transfer tokens
 export const transferTokens = async (
   connection: Connection,
-  wallet: SolanaWallet,
+  publicKey: PublicKey | null,
+  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
   mintAddress: string,
   recipientAddress: string,
   amount: number
 ): Promise<TransactionResult> => {
   try {
-    ensureWalletConnected(wallet.publicKey);
+    ensureWalletConnected(publicKey);
 
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
-    }
-
-    if (!recipientAddress || recipientAddress.length === 0) {
-      throw new Error("Invalid recipient address");
+    if (!mintAddress || !recipientAddress) {
+      throw new Error("Mint address and recipient address are required");
     }
 
     if (amount <= 0) {
@@ -422,31 +253,24 @@ export const transferTokens = async (
     const mint = new PublicKey(mintAddress);
     const recipient = new PublicKey(recipientAddress);
 
-    // Get source token account
-    const sourceAccount = await getAssociatedTokenAddress(
-      mint,
-      wallet.publicKey!
-    );
+    // Get source and destination token accounts
+    const sourceATA = await getAssociatedTokenAddress(mint, publicKey!);
+    const destinationATA = await getAssociatedTokenAddress(mint, recipient);
 
-    // Get destination token account
-    const destinationAccount = await getAssociatedTokenAddress(mint, recipient);
+    // Get mint info to determine decimals
+    const mintInfo = await getMint(connection, mint);
+    const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    // Create transaction with transfer instruction
     const transaction = new Transaction().add(
       createTransferInstruction(
-        sourceAccount, // Source
-        destinationAccount, // Destination
-        wallet.publicKey!, // Owner
-        amount // Amount
+        sourceATA,
+        destinationATA,
+        publicKey!,
+        amountWithDecimals
       )
     );
 
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
+    const signature = await sendTransaction(transaction, connection);
 
     return {
       signature,
@@ -465,15 +289,16 @@ export const transferTokens = async (
 // Burn tokens
 export const burnTokens = async (
   connection: Connection,
-  wallet: SolanaWallet,
+  publicKey: PublicKey | null,
+  sendTransaction: (transaction: Transaction, connection: Connection) => Promise<string>,
   mintAddress: string,
   amount: number
 ): Promise<TransactionResult> => {
   try {
-    ensureWalletConnected(wallet.publicKey);
+    ensureWalletConnected(publicKey);
 
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
+    if (!mintAddress) {
+      throw new Error("Mint address is required");
     }
 
     if (amount <= 0) {
@@ -481,29 +306,22 @@ export const burnTokens = async (
     }
 
     const mint = new PublicKey(mintAddress);
+    const tokenATA = await getAssociatedTokenAddress(mint, publicKey!);
 
-    // Get token account
-    const tokenAccount = await getAssociatedTokenAddress(
-      mint,
-      wallet.publicKey!
-    );
+    // Get mint info to determine decimals
+    const mintInfo = await getMint(connection, mint);
+    const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    // Create transaction with burn instruction
     const transaction = new Transaction().add(
       createBurnInstruction(
-        tokenAccount, // Account
-        mint, // Mint
-        wallet.publicKey!, // Owner
-        amount // Amount
+        tokenATA,
+        mint,
+        publicKey!,
+        amountWithDecimals
       )
     );
 
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
+    const signature = await sendTransaction(transaction, connection);
 
     return {
       signature,
@@ -511,119 +329,6 @@ export const burnTokens = async (
     };
   } catch (error) {
     console.error("Error burning tokens:", error);
-    return {
-      signature: "",
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-};
-
-// Approve tokens (allow another address to spend tokens)
-export const approveTokens = async (
-  connection: Connection,
-  wallet: SolanaWallet,
-  mintAddress: string,
-  delegateAddress: string,
-  amount: number
-): Promise<TransactionResult> => {
-  try {
-    ensureWalletConnected(wallet.publicKey);
-
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
-    }
-
-    if (!delegateAddress || delegateAddress.length === 0) {
-      throw new Error("Invalid delegate address");
-    }
-
-    if (amount <= 0) {
-      throw new Error("Amount must be greater than 0");
-    }
-
-    const mint = new PublicKey(mintAddress);
-    const delegate = new PublicKey(delegateAddress);
-
-    // Get token account
-    const tokenAccount = await getAssociatedTokenAddress(
-      mint,
-      wallet.publicKey!
-    );
-
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    // Create transaction with approve instruction
-    const transaction = new Transaction().add(
-      createApproveInstruction(
-        tokenAccount, // Account
-        delegate, // Delegate
-        wallet.publicKey!, // Owner
-        amount // Amount
-      )
-    );
-
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
-
-    return {
-      signature,
-      success: true,
-    };
-  } catch (error) {
-    console.error("Error approving tokens:", error);
-    return {
-      signature: "",
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-};
-
-// Revoke approval
-export const revokeApproval = async (
-  connection: Connection,
-  wallet: SolanaWallet,
-  mintAddress: string
-): Promise<TransactionResult> => {
-  try {
-    ensureWalletConnected(wallet.publicKey);
-
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
-    }
-
-    const mint = new PublicKey(mintAddress);
-
-    // Get token account
-    const tokenAccount = await getAssociatedTokenAddress(
-      mint,
-      wallet.publicKey!
-    );
-
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
-    }
-
-    // Create transaction with revoke instruction
-    const transaction = new Transaction().add(
-      createRevokeInstruction(
-        tokenAccount, // Account
-        wallet.publicKey! // Owner
-      )
-    );
-
-    const signature = await wallet.sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, "confirmed");
-
-    return {
-      signature,
-      success: true,
-    };
-  } catch (error) {
-    console.error("Error revoking approval:", error);
     return {
       signature: "",
       success: false,
@@ -641,25 +346,19 @@ export const getTokenAccountInfo = async (
   try {
     ensureWalletConnected(publicKey);
 
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
+    if (!mintAddress) {
+      return null;
     }
 
     const mint = new PublicKey(mintAddress);
+    const tokenATA = await getAssociatedTokenAddress(mint, publicKey!);
 
-    // Get associated token address
-    const tokenAccountAddress = await getAssociatedTokenAddress(
-      mint,
-      publicKey!
-    );
-
-    // Get account info
-    const accountInfo = await getAccount(connection, tokenAccountAddress);
+    const accountInfo = await getAccount(connection, tokenATA);
     const mintInfo = await getMint(connection, mint);
 
     return {
       mint: mintAddress,
-      account: safeToBase58(tokenAccountAddress),
+      account: tokenATA.toBase58(),
       balance: Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals),
       decimals: mintInfo.decimals,
     };
@@ -675,8 +374,8 @@ export const getMintInfo = async (
   mintAddress: string
 ): Promise<MintInfo | null> => {
   try {
-    if (!mintAddress || mintAddress.length === 0) {
-      throw new Error("Invalid mint address");
+    if (!mintAddress) {
+      return null;
     }
 
     const mint = new PublicKey(mintAddress);
@@ -686,42 +385,11 @@ export const getMintInfo = async (
       address: mintAddress,
       decimals: mintInfo.decimals,
       supply: Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
-      mintAuthority: mintInfo.mintAuthority
-        ? safeToBase58(mintInfo.mintAuthority)
-        : null,
-      freezeAuthority: mintInfo.freezeAuthority
-        ? safeToBase58(mintInfo.freezeAuthority)
-        : null,
+      mintAuthority: mintInfo.mintAuthority?.toBase58() || null,
+      freezeAuthority: mintInfo.freezeAuthority?.toBase58() || null,
     };
   } catch (error) {
     console.error("Error getting mint info:", error);
     return null;
-  }
-};
-
-// Check if token account exists
-export const tokenAccountExists = async (
-  connection: Connection,
-  publicKey: PublicKey | null,
-  mintAddress: string
-): Promise<boolean> => {
-  try {
-    ensureWalletConnected(publicKey);
-
-    if (!mintAddress || mintAddress.length === 0) {
-      return false;
-    }
-
-    const mint = new PublicKey(mintAddress);
-    const tokenAccountAddress = await getAssociatedTokenAddress(
-      mint,
-      publicKey!
-    );
-
-    const accountInfo = await connection.getAccountInfo(tokenAccountAddress);
-    return accountInfo !== null;
-  } catch (error) {
-    console.error("Error checking token account existence:", error);
-    return false;
   }
 };

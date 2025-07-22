@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useSplTokens } from "@/services/spl-tokens";
 import type {
+  CreateTokenForm,
   TokenInfo,
   TransactionResult,
   MintInfo,
@@ -26,30 +27,23 @@ export const SPLProgramInteractions: React.FC = () => {
   const [status, setStatus] = useState<string>("");
   const [solBalance, setSolBalance] = useState<number | null>(null);
 
-  // Token operations state
+  // Token creation form
+  const [tokenName, setTokenName] = useState<string>("My Token");
+  const [symbol, setSymbol] = useState<string>("TKN");
+  const [metadata, setMetadata] = useState<string>("https://gist.githubusercontent.com/CodingCookiee/b5aeb8320b9ba6b9ca81d2ede30019fa/raw/f4ff185a9ecb44c5cf329a26924e274729202e7a/metadata.json");
+  const [amount, setAmount] = useState<string>("1000");
+  const [decimals, setDecimals] = useState<string>("9");
+
+  // Token operations
   const [tokenMint, setTokenMint] = useState<string>("");
-  const [tokenAccount, setTokenAccount] = useState<string>("");
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [mintInfo, setMintInfo] = useState<MintInfo | null>(null);
 
-  // Form inputs
+  // Operation forms
   const [mintAmount, setMintAmount] = useState<string>("100");
   const [transferRecipient, setTransferRecipient] = useState<string>("");
   const [transferAmount, setTransferAmount] = useState<string>("10");
   const [burnAmount, setBurnAmount] = useState<string>("5");
-  const [approveDelegate, setApproveDelegate] = useState<string>("");
-  const [approveAmount, setApproveAmount] = useState<string>("50");
-  const [decimals, setDecimals] = useState<string>("9");
-
-  //  token metadata fields
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [tokenName, setTokenName] = useState<string>("My Token");
-  const [tokenSymbol, setTokenSymbol] = useState<string>("TKN");
-  const [tokenUri, setTokenUri] = useState<string>("");
-  const [tokenImage, setTokenImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [tokenDescription, setTokenDescription] =
-    useState<string>("A custom SPL token");
 
   // Load initial data
   useEffect(() => {
@@ -94,7 +88,6 @@ export const SPLProgramInteractions: React.FC = () => {
       setTokenInfo(info);
     } catch (error) {
       console.error("Error loading token info:", error);
-      // Don't show error for token info as account might not exist yet
     }
   };
 
@@ -106,7 +99,6 @@ export const SPLProgramInteractions: React.FC = () => {
       setMintInfo(info);
     } catch (error) {
       console.error("Error loading mint info:", error);
-      // Don't show error for mint info as it might not exist yet
     }
   };
 
@@ -116,8 +108,11 @@ export const SPLProgramInteractions: React.FC = () => {
       // Refresh data
       setTimeout(() => {
         loadSOLBalance();
-        loadTokenInfo();
-      }, 2000); // Wait a bit for blockchain to update
+        if (tokenMint) {
+          loadTokenInfo();
+          loadMintInfo();
+        }
+      }, 2000);
     } else {
       setStatus(`❌ Error: ${result.error}`);
     }
@@ -146,74 +141,52 @@ export const SPLProgramInteractions: React.FC = () => {
     }
   };
 
-  // Handle image selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTokenImage(file);
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Clear image
-  const handleClearImage = () => {
-    setTokenImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
   // Token operations
   const handleCreateToken = async () => {
     await executeWithLoading(async () => {
       const decimalsNum = parseInt(decimals);
+      const amountNum = parseInt(amount);
+
       if (isNaN(decimalsNum) || decimalsNum < 0 || decimalsNum > 9) {
         throw new Error("Decimals must be a number between 0 and 9");
       }
 
-      // Create token with metadata
-      const result = await solana.createToken({
+      if (isNaN(amountNum) || amountNum <= 0) {
+        throw new Error("Amount must be a positive number");
+      }
+
+      if (!tokenName || !symbol) {
+        throw new Error("Token name and symbol are required");
+      }
+
+      const form: CreateTokenForm = {
+        tokenName,
+        symbol,
+        metadata,
+        amount: amountNum,
         decimals: decimalsNum,
-        metadata: {
-          name: tokenName,
-          symbol: tokenSymbol,
-          description: tokenDescription,
-          image: tokenImage || tokenUri || undefined,
-          sellerFeeBasisPoints: 0,
-        },
-      });
+      };
+
+      const result = await solana.createToken(form);
 
       if (result.success) {
         setTokenMint(result.signature);
-        handleResult(result, "Token created");
+        setStatus(`✅ Token created successfully!
+
+Mint Address: ${result.signature}
+
+To add your token to Phantom wallet:
+1. Open Phantom and click "Tokens"
+2. Click the "+" button
+3. Paste your token mint address: ${result.signature}
+4. Click "Add"
+
+View on Solana Explorer:
+https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
       } else {
         handleResult(result, "");
       }
     }, "Creating token");
-  };
-
-  const handleCreateTokenAccount = async () => {
-    if (!tokenMint) {
-      setStatus("❌ Please create a token first");
-      return;
-    }
-
-    await executeWithLoading(async () => {
-      const result = await solana.createTokenAccount(tokenMint);
-      if (result.success) {
-        setTokenAccount(result.signature);
-        handleResult(result, "Token account created");
-      } else {
-        handleResult(result, "");
-      }
-    }, "Creating token account");
   };
 
   const handleMintTokens = async () => {
@@ -223,18 +196,13 @@ export const SPLProgramInteractions: React.FC = () => {
     }
 
     await executeWithLoading(async () => {
-      const amount = parseFloat(mintAmount);
-      if (isNaN(amount) || amount <= 0) {
+      const amountNum = parseFloat(mintAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
         throw new Error("Amount must be a positive number");
       }
 
-      const decimalsNum = mintInfo?.decimals || 9;
-      const amountInSmallestUnit = Math.floor(
-        amount * Math.pow(10, decimalsNum)
-      );
-
-      const result = await solana.mintTokens(tokenMint, amountInSmallestUnit);
-      handleResult(result, `Minted ${amount} tokens`);
+      const result = await solana.mintTokens(tokenMint, amountNum);
+      handleResult(result, `Minted ${amountNum} tokens`);
     }, "Minting tokens");
   };
 
@@ -245,22 +213,17 @@ export const SPLProgramInteractions: React.FC = () => {
     }
 
     await executeWithLoading(async () => {
-      const amount = parseFloat(transferAmount);
-      if (isNaN(amount) || amount <= 0) {
+      const amountNum = parseFloat(transferAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
         throw new Error("Amount must be a positive number");
       }
-
-      const decimalsNum = mintInfo?.decimals || 9;
-      const amountInSmallestUnit = Math.floor(
-        amount * Math.pow(10, decimalsNum)
-      );
 
       const result = await solana.transferTokens(
         tokenMint,
         transferRecipient,
-        amountInSmallestUnit
+        amountNum
       );
-      handleResult(result, `Transferred ${amount} tokens`);
+      handleResult(result, `Transferred ${amountNum} tokens`);
     }, "Transferring tokens");
   };
 
@@ -271,62 +234,18 @@ export const SPLProgramInteractions: React.FC = () => {
     }
 
     await executeWithLoading(async () => {
-      const amount = parseFloat(burnAmount);
-      if (isNaN(amount) || amount <= 0) {
+      const amountNum = parseFloat(burnAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
         throw new Error("Amount must be a positive number");
       }
 
-      const decimalsNum = mintInfo?.decimals || 9;
-      const amountInSmallestUnit = Math.floor(
-        amount * Math.pow(10, decimalsNum)
-      );
-
-      const result = await solana.burnTokens(tokenMint, amountInSmallestUnit);
-      handleResult(result, `Burned ${amount} tokens`);
+      const result = await solana.burnTokens(tokenMint, amountNum);
+      handleResult(result, `Burned ${amountNum} tokens`);
     }, "Burning tokens");
-  };
-
-  const handleApproveTokens = async () => {
-    if (!tokenMint || !approveDelegate) {
-      setStatus("❌ Please provide token mint and delegate address");
-      return;
-    }
-
-    await executeWithLoading(async () => {
-      const amount = parseFloat(approveAmount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
-
-      const decimalsNum = mintInfo?.decimals || 9;
-      const amountInSmallestUnit = Math.floor(
-        amount * Math.pow(10, decimalsNum)
-      );
-
-      const result = await solana.approveTokens(
-        tokenMint,
-        approveDelegate,
-        amountInSmallestUnit
-      );
-      handleResult(result, `Approved ${amount} tokens`);
-    }, "Approving tokens");
-  };
-
-  const handleRevokeApproval = async () => {
-    if (!tokenMint) {
-      setStatus("❌ Please create a token first");
-      return;
-    }
-
-    await executeWithLoading(async () => {
-      const result = await solana.revokeApproval(tokenMint);
-      handleResult(result, "Approval revoked");
-    }, "Revoking approval");
   };
 
   const isValidSolanaAddress = (address: string): boolean => {
     try {
-      // Basic validation - Solana addresses are base58 encoded and typically 32-44 characters
       return (
         address.length >= 32 &&
         address.length <= 44 &&
@@ -375,15 +294,27 @@ export const SPLProgramInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h3" color="primary">
-                SPL Token Program Interactions
+                SPL Token Creator
               </Text>
             </CardTitle>
             <CardDescription>
               <Text variant="body" color="muted">
-                Create, mint, transfer, burn, and manage SPL tokens on Solana
+                Create, mint, transfer, and burn SPL tokens on Solana
               </Text>
             </CardDescription>
           </CardHeader>
+          {solBalance !== null && (
+            <CardContent>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <Text variant="small" color="muted">
+                  Current SOL Balance:
+                </Text>
+                <Text variant="h6" color="primary" weight="semibold" className="ml-2">
+                  {solBalance.toFixed(4)} SOL
+                </Text>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* Token Creation */}
@@ -396,7 +327,7 @@ export const SPLProgramInteractions: React.FC = () => {
             </CardTitle>
             <CardDescription>
               <Text variant="small" color="muted">
-                Create a new SPL token with custom properties
+                Create a new SPL token with metadata
               </Text>
             </CardDescription>
           </CardHeader>
@@ -412,21 +343,21 @@ export const SPLProgramInteractions: React.FC = () => {
                   type="text"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
                   placeholder="My Token"
                 />
               </div>
               <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
-                    Token Symbol
+                    Symbol
                   </Text>
                 </label>
                 <input
                   type="text"
-                  value={tokenSymbol}
-                  onChange={(e) => setTokenSymbol(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
                   placeholder="TKN"
                 />
               </div>
@@ -435,19 +366,37 @@ export const SPLProgramInteractions: React.FC = () => {
             <div>
               <label className="block mb-2">
                 <Text variant="small" weight="medium">
-                  Description (Optional)
+                  Metadata URL
                 </Text>
               </label>
               <input
                 type="text"
-                value={tokenDescription}
-                onChange={(e) => setTokenDescription(e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                placeholder="A description of your token"
+                value={metadata}
+                onChange={(e) => setMetadata(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                placeholder="https://example.com/metadata.json"
               />
+              <Text variant="extraSmall" color="muted" className="mt-1">
+                JSON file with token metadata (name, symbol, image, description)
+              </Text>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2">
+                  <Text variant="small" weight="medium">
+                    Initial Amount
+                  </Text>
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="1000"
+                />
+              </div>
               <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
@@ -460,123 +409,56 @@ export const SPLProgramInteractions: React.FC = () => {
                   onChange={(e) => setDecimals(e.target.value)}
                   min="0"
                   max="9"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
+                  placeholder="9"
                 />
-              </div>
-
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Token Image (Optional)
-                  </Text>
-                </label>
-                <div className="space-y-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <div className="flex space-x-2">
-                    <Button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      variant="outline"
-                      size="sm"
-                      className="flex-grow"
-                    >
-                      {tokenImage ? "Change Image" : "Upload Image"}
-                    </Button>
-                    {tokenImage && (
-                      <Button
-                        type="button"
-                        onClick={handleClearImage}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-300"
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-
-                  {imagePreview && (
-                    <div className="mt-2 relative w-20 h-20 border rounded overflow-hidden">
-                      <img
-                        src={imagePreview}
-                        alt="Token preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-
-                  <Text variant="extraSmall" color="muted">
-                    Or use a hosted image URL:
-                  </Text>
-                  <input
-                    type="text"
-                    value={tokenUri}
-                    onChange={(e) => setTokenUri(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                    placeholder="https://example.com/image.png"
-                    disabled={!!tokenImage}
-                  />
-                </div>
               </div>
             </div>
 
             <Button
               onClick={handleCreateToken}
-              disabled={loading || !tokenName || !tokenSymbol}
-              className="w-full"
+              disabled={loading || !tokenName || !symbol}
+              className="w-full py-3 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
             >
-              Create Token
+              {loading ? "Creating Token..." : "Create Token"}
             </Button>
 
             {tokenMint && (
-              <div className="space-y-2">
+              <div className="space-y-2 mt-4">
                 <Text variant="small" weight="medium">
                   Token Mint Address:
                 </Text>
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-xs break-all">
+                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-sm break-all">
                   {tokenMint}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Token Account Creation */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                2. Create Token Account
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Create an associated token account to hold your tokens
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={handleCreateTokenAccount}
-              disabled={loading || !tokenMint}
-              className="w-full"
-            >
-              Create Token Account
-            </Button>
-
-            {tokenAccount && (
-              <div className="space-y-2 mt-4">
-                <Text variant="small" weight="medium">
-                  Token Account Address:
-                </Text>
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border font-mono text-xs break-all">
-                  {tokenAccount}
+                <div className="flex space-x-2">
+                                   <Button
+                    onClick={() =>
+                      window.open(
+                        `https://explorer.solana.com/address/${tokenMint}?cluster=devnet`,
+                        "_blank"
+                      )
+                    }
+                    variant="outline"
+                    size="sm"
+                  >
+                    View in Explorer
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(tokenMint);
+                      setStatus("✅ Token address copied to clipboard");
+                      setTimeout(() => {
+                        if (status.includes("Token address copied")) {
+                          setStatus("");
+                        }
+                      }, 3000);
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Copy Address
+                  </Button>
                 </div>
               </div>
             )}
@@ -585,20 +467,25 @@ export const SPLProgramInteractions: React.FC = () => {
 
         {/* Token Operations */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Mint Tokens */}
+          {/* Mint Additional Tokens */}
           <Card>
             <CardHeader>
               <CardTitle>
                 <Text variant="h6" color="default">
-                  Mint Tokens
+                  2. Mint Additional Tokens
                 </Text>
               </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Mint more tokens to your wallet
+                </Text>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
-                    Amount
+                    Amount to Mint
                   </Text>
                 </label>
                 <input
@@ -607,15 +494,17 @@ export const SPLProgramInteractions: React.FC = () => {
                   onChange={(e) => setMintAmount(e.target.value)}
                   min="0"
                   step="0.1"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="100"
                 />
               </div>
               <Button
                 onClick={handleMintTokens}
                 disabled={loading || !tokenMint}
                 className="w-full"
+                variant="outline"
               >
-                Mint Tokens
+                {loading ? "Minting..." : "Mint Tokens"}
               </Button>
             </CardContent>
           </Card>
@@ -625,15 +514,20 @@ export const SPLProgramInteractions: React.FC = () => {
             <CardHeader>
               <CardTitle>
                 <Text variant="h6" color="default">
-                  Burn Tokens
+                  3. Burn Tokens
                 </Text>
               </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Permanently destroy tokens
+                </Text>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
-                    Amount
+                    Amount to Burn
                   </Text>
                 </label>
                 <input
@@ -642,7 +536,8 @@ export const SPLProgramInteractions: React.FC = () => {
                   onChange={(e) => setBurnAmount(e.target.value)}
                   min="0"
                   step="0.1"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="5"
                 />
               </div>
               <Button
@@ -651,7 +546,7 @@ export const SPLProgramInteractions: React.FC = () => {
                 variant="outline"
                 className="w-full border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
               >
-                Burn Tokens
+                {loading ? "Burning..." : "Burn Tokens"}
               </Button>
             </CardContent>
           </Card>
@@ -662,7 +557,7 @@ export const SPLProgramInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h5" color="default">
-                Transfer Tokens
+                4. Transfer Tokens
               </Text>
             </CardTitle>
             <CardDescription>
@@ -684,7 +579,7 @@ export const SPLProgramInteractions: React.FC = () => {
                   value={transferRecipient}
                   onChange={(e) => setTransferRecipient(e.target.value)}
                   placeholder="Enter Solana address"
-                  className={`w-full p-2 border rounded-lg dark:bg-gray-800 ${
+                  className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
                     transferRecipient &&
                     !isValidSolanaAddress(transferRecipient)
                       ? "border-red-500 bg-red-50 dark:bg-red-900/20"
@@ -704,7 +599,7 @@ export const SPLProgramInteractions: React.FC = () => {
               <div>
                 <label className="block mb-2">
                   <Text variant="small" weight="medium">
-                    Amount
+                    Amount to Transfer
                   </Text>
                 </label>
                 <input
@@ -713,7 +608,8 @@ export const SPLProgramInteractions: React.FC = () => {
                   onChange={(e) => setTransferAmount(e.target.value)}
                   min="0"
                   step="0.1"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
+                  placeholder="10"
                 />
               </div>
             </div>
@@ -727,105 +623,10 @@ export const SPLProgramInteractions: React.FC = () => {
               }
               className="w-full"
             >
-              Transfer Tokens
+              {loading ? "Transferring..." : "Transfer Tokens"}
             </Button>
           </CardContent>
         </Card>
-
-        {/* Approve & Revoke */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Approve Tokens */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h6" color="default">
-                  Approve Tokens
-                </Text>
-              </CardTitle>
-              <CardDescription>
-                <Text variant="extraSmall" color="muted">
-                  Allow another address to spend your tokens
-                </Text>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Delegate Address
-                  </Text>
-                </label>
-                <input
-                  type="text"
-                  value={approveDelegate}
-                  onChange={(e) => setApproveDelegate(e.target.value)}
-                  placeholder="Enter delegate address"
-                  className={`w-full p-2 border rounded-lg dark:bg-gray-800 ${
-                    approveDelegate && !isValidSolanaAddress(approveDelegate)
-                      ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                      : approveDelegate && isValidSolanaAddress(approveDelegate)
-                      ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                      : "border-gray-300 dark:border-gray-600"
-                  }`}
-                />
-              </div>
-              <div>
-                <label className="block mb-2">
-                  <Text variant="small" weight="medium">
-                    Amount
-                  </Text>
-                </label>
-                <input
-                  type="number"
-                  value={approveAmount}
-                  onChange={(e) => setApproveAmount(e.target.value)}
-                  min="0"
-                  step="0.1"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-                />
-              </div>
-              <Button
-                onClick={handleApproveTokens}
-                disabled={
-                  loading ||
-                  !tokenMint ||
-                  !approveDelegate ||
-                  !isValidSolanaAddress(approveDelegate)
-                }
-                variant="outline"
-                className="w-full"
-              >
-                Approve Tokens
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Revoke Approval */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Text variant="h6" color="default">
-                  Revoke Approval
-                </Text>
-              </CardTitle>
-              <CardDescription>
-                <Text variant="extraSmall" color="muted">
-                  Remove all token approvals
-                </Text>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center min-h-[140px]">
-              <Button
-                onClick={handleRevokeApproval}
-                disabled={loading || !tokenMint}
-                variant="outline"
-                className="w-full border-orange-300 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20"
-              >
-                Revoke All Approvals
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Token Information */}
         {(tokenInfo || mintInfo) && (
@@ -843,15 +644,15 @@ export const SPLProgramInteractions: React.FC = () => {
                 {tokenInfo && (
                   <div className="space-y-3">
                     <Text variant="h6" color="primary" weight="semibold">
-                      Token Account
+                      Your Token Account
                     </Text>
                     <div className="space-y-2">
-                      <div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <Text variant="small" color="muted">
                           Balance:
                         </Text>
-                        <Text variant="body" weight="semibold" className="ml-2">
-                          {tokenInfo.balance.toFixed(tokenInfo.decimals)} tokens
+                        <Text variant="body" weight="semibold">
+                          {tokenInfo.balance.toLocaleString()} tokens
                         </Text>
                       </div>
                       <div>
@@ -870,22 +671,22 @@ export const SPLProgramInteractions: React.FC = () => {
                 {mintInfo && (
                   <div className="space-y-3">
                     <Text variant="h6" color="primary" weight="semibold">
-                      Mint Information
+                      Token Mint Information
                     </Text>
                     <div className="space-y-2">
-                      <div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <Text variant="small" color="muted">
                           Total Supply:
                         </Text>
-                        <Text variant="body" weight="semibold" className="ml-2">
-                          {mintInfo.supply.toFixed(mintInfo.decimals)} tokens
+                        <Text variant="body" weight="semibold">
+                          {mintInfo.supply.toLocaleString()} tokens
                         </Text>
                       </div>
-                      <div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <Text variant="small" color="muted">
                           Decimals:
                         </Text>
-                        <Text variant="body" weight="semibold" className="ml-2">
+                        <Text variant="body" weight="semibold">
                           {mintInfo.decimals}
                         </Text>
                       </div>
@@ -920,7 +721,7 @@ export const SPLProgramInteractions: React.FC = () => {
               >
                 <div className="flex items-start space-x-3">
                   <div className="flex-1">
-                    <Text variant="small" weight="medium" className="break-all">
+                    <Text variant="small" weight="medium" className="whitespace-pre-line break-all">
                       {status}
                     </Text>
                   </div>
@@ -939,6 +740,8 @@ export const SPLProgramInteractions: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        
       </div>
     </AuthGate>
   );
