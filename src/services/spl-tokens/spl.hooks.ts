@@ -64,6 +64,60 @@ export const useSplTokens = () => {
       );
     },
 
+    // New approve and revoke functions
+    approveTokens: (
+      mintAddress: string,
+      delegateAddress: string,
+      amount: number
+    ) => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.approveTokens(
+        connection,
+        wallet.publicKey,
+        wallet.sendTransaction!,
+        mintAddress,
+        delegateAddress,
+        amount
+      );
+    },
+
+    revokeTokenApproval: (mintAddress: string) => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.revokeTokenApproval(
+        connection,
+        wallet.publicKey,
+        wallet.sendTransaction!,
+        mintAddress
+      );
+    },
+
+    getTokenAllowance: (mintAddress: string) => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.getTokenAllowance(
+        connection,
+        wallet.publicKey,
+        mintAddress
+      );
+    },
+
+    transferTokensFrom: (
+      mintAddress: string,
+      ownerAddress: string,
+      recipientAddress: string,
+      amount: number
+    ) => {
+      if (!isReady) throw new Error("Wallet not ready");
+      return SplService.transferTokensFrom(
+        connection,
+        wallet.publicKey,
+        wallet.sendTransaction!,
+        mintAddress,
+        ownerAddress,
+        recipientAddress,
+        amount
+      );
+    },
+
     closeTokenAccount: (mintAddress: string) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.closeTokenAccount(

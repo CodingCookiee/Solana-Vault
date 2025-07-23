@@ -15,6 +15,7 @@ import {
 
 import { TokenCreationForm } from "./TokenCreationForm";
 import { TokenOperations } from "./TokenOperations";
+import { TokenApprovalOperations } from "./TokenApprovalOperations";
 import { TokenInfoDisplay } from "./TokenInfoDisplay";
 import { TokenHistory } from "./TokenHistory";
 import { StatusDisplay } from "./StatusDisplay";
@@ -178,7 +179,8 @@ export const SPLProgramInteractions: React.FC = () => {
             </CardTitle>
             <CardDescription>
               <Text variant="body" color="muted">
-                Create, mint, transfer, and burn SPL tokens on Solana
+                Create, mint, transfer, burn, approve, and revoke SPL tokens on
+                Solana
               </Text>
             </CardDescription>
           </CardHeader>
@@ -283,7 +285,7 @@ export const SPLProgramInteractions: React.FC = () => {
           <CardHeader>
             <CardTitle>
               <Text variant="h5" color="default">
-                Token Operations
+                2. Basic Token Operations
               </Text>
             </CardTitle>
             <CardDescription>
@@ -294,6 +296,29 @@ export const SPLProgramInteractions: React.FC = () => {
           </CardHeader>
           <CardContent>
             <TokenOperations
+              tokenMint={tokenMint}
+              setStatus={setStatus}
+              onOperationComplete={refreshData}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Token Approval Operations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Text variant="h5" color="default">
+                3. Token Approval Operations
+              </Text>
+            </CardTitle>
+            <CardDescription>
+              <Text variant="small" color="muted">
+                Approve spending permissions and delegate transfers
+              </Text>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TokenApprovalOperations
               tokenMint={tokenMint}
               setStatus={setStatus}
               onOperationComplete={refreshData}

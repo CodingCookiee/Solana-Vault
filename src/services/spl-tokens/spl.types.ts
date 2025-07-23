@@ -51,6 +51,18 @@ export interface CreatedToken {
   tokenAccount?: string;
 }
 
+export interface TokenAllowance {
+  owner: string;
+  delegate: string;
+  amount: number;
+  mintAddress: string;
+}
+
+export interface ApproveTokensForm {
+  delegateAddress: string;
+  amount: number;
+}
+
 export interface SplTokenServiceState {
   connected: boolean;
   publicKey: PublicKey | null;

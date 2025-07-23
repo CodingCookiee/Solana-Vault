@@ -17,12 +17,16 @@ import {
   createMintToInstruction,
   createTransferInstruction,
   createBurnInstruction,
+  createApproveInstruction,
+  createRevokeInstruction,
   getAccount,
   getMint,
   AccountLayout,
   MintLayout,
 } from "@solana/spl-token";
 import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
+import TransactionResult from "@/services/spl-tokens";
+import { TokenAllowance } from "./spl.types";
 import {
   CreateTokenForm,
   TokenInfo,
@@ -30,6 +34,7 @@ import {
   MintInfo,
   CreatedToken,
   TokenMetadata,
+  TokenAllowance,
 } from "./spl.types";
 
 // Hardcoded Metaplex Token Metadata Program ID
@@ -736,5 +741,230 @@ export const getOwnedTokens = async (
   } catch (error) {
     console.error("Error getting owned tokens:", error);
     return [];
+  }
+};
+
+// Approve tokens for delegation
+export const approveTokens = async (
+  connection: Connection,
+  publicKey: PublicKey | null,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
+  mintAddress: string,
+  delegateAddress: string,
+  amount: number
+): Promise<TransactionResult> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    if (!mintAddress || !delegateAddress) {
+      throw new Error("Mint address and delegate address are required");
+    }
+
+    if (amount <= 0) {
+      throw new Error("Amount must be greater than 0");
+    }
+
+    const mint = new PublicKey(mintAddress);
+    const delegate = new PublicKey(delegateAddress);
+
+    // Get the token account for the owner
+    const ownerTokenAccount = await getAssociatedTokenAddress(mint, publicKey!);
+
+    // Get mint info to determine decimals
+    const mintInfo = await getMint(connection, mint);
+    const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
+
+    // Create approve instruction
+    const transaction = new Transaction().add(
+      createApproveInstruction(
+        ownerTokenAccount, // Source account (owner's token account)
+        delegate, // Delegate
+        publicKey!, // Owner
+        amountWithDecimals // Amount to approve
+      )
+    );
+
+    const signature = await sendTransaction(transaction, connection);
+
+    return {
+      signature,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error approving tokens:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+// Revoke token approval
+export const revokeTokenApproval = async (
+  connection: Connection,
+  publicKey: PublicKey | null,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
+  mintAddress: string
+): Promise<TransactionResult> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    if (!mintAddress) {
+      throw new Error("Mint address is required");
+    }
+
+    const mint = new PublicKey(mintAddress);
+
+    // Get the token account for the owner
+    const ownerTokenAccount = await getAssociatedTokenAddress(mint, publicKey!);
+
+    // Create revoke instruction
+    const transaction = new Transaction().add(
+      createRevokeInstruction(
+        ownerTokenAccount, // Source account (owner's token account)
+        publicKey! // Owner
+      )
+    );
+
+    const signature = await sendTransaction(transaction, connection);
+
+    return {
+      signature,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error revoking token approval:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+// Get token allowance information
+export const getTokenAllowance = async (
+  connection: Connection,
+  publicKey: PublicKey | null,
+  mintAddress: string
+): Promise<TokenAllowance | null> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    if (!mintAddress) {
+      return null;
+    }
+
+    const mint = new PublicKey(mintAddress);
+    const ownerTokenAccount = await getAssociatedTokenAddress(mint, publicKey!);
+
+    // Get account info
+    const accountInfo = await getAccount(connection, ownerTokenAccount);
+    
+    if (!accountInfo.delegate) {
+      return null; // No delegation
+    }
+
+    // Get mint info for decimals
+    const mintInfo = await getMint(connection, mint);
+
+    return {
+      owner: publicKey!.toBase58(),
+      delegate: accountInfo.delegate.toBase58(),
+      amount: Number(accountInfo.delegatedAmount) / Math.pow(10, mintInfo.decimals),
+      mintAddress,
+    };
+  } catch (error) {
+    console.error("Error getting token allowance:", error);
+    return null;
+  }
+};
+
+// Transfer tokens using delegation (transferFrom equivalent)
+export const transferTokensFrom = async (
+  connection: Connection,
+  publicKey: PublicKey | null,
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
+  mintAddress: string,
+  ownerAddress: string,
+  recipientAddress: string,
+  amount: number
+): Promise<TransactionResult> => {
+  try {
+    ensureWalletConnected(publicKey);
+
+    if (!mintAddress || !ownerAddress || !recipientAddress) {
+      throw new Error("Mint address, owner address, and recipient address are required");
+    }
+
+    if (amount <= 0) {
+      throw new Error("Amount must be greater than 0");
+    }
+
+    const mint = new PublicKey(mintAddress);
+    const owner = new PublicKey(ownerAddress);
+    const recipient = new PublicKey(recipientAddress);
+
+    // Get source and destination token accounts
+    const sourceATA = await getAssociatedTokenAddress(mint, owner);
+    const destinationATA = await getAssociatedTokenAddress(mint, recipient);
+
+    // Get mint info to determine decimals
+    const mintInfo = await getMint(connection, mint);
+    const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
+
+    // Check if destination token account exists
+    const destinationAccountInfo = await connection.getAccountInfo(destinationATA);
+
+    const transaction = new Transaction();
+
+    // If destination account doesn't exist, create it first
+    if (!destinationAccountInfo) {
+      console.log("Creating destination token account:", destinationATA.toBase58());
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          publicKey!, // Payer (delegate)
+          destinationATA, // Associated token account
+          recipient, // Owner
+          mint // Mint
+        )
+      );
+    }
+
+    // Add transfer instruction with delegate authority
+    transaction.add(
+      createTransferInstruction(
+        sourceATA, // Source
+        destinationATA, // Destination
+        publicKey!, // Authority (delegate)
+        amountWithDecimals, // Amount
+        [], // Multi-signers (none in this case)
+        TOKEN_PROGRAM_ID
+      )
+    );
+
+    const signature = await sendTransaction(transaction, connection);
+
+    return {
+      signature,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error transferring tokens from:", error);
+    return {
+      signature: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 };
