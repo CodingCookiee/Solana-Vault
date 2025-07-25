@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
+import { PublicKey } from "@solana/web3.js";
 import {
   Card,
   CardHeader,
@@ -132,8 +132,6 @@ export const ContractInteractions: React.FC = () => {
           </CardContent>
         </Card>
 
-    
-
         {/* CRUD */}
         <Card className="mt-4">
           <CardHeader>
@@ -159,7 +157,6 @@ export const ContractInteractions: React.FC = () => {
             </Button>
           </CardContent>
         </Card>
-
 
         {/* SPL Program  Interactions */}
         <Card className="mt-4">

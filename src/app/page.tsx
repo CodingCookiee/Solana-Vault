@@ -1,11 +1,11 @@
 import { WalletConnection } from "@/components/ui/client/WalletConnect/WalletConnection";
 import { TransactionPanel } from "@/components/ui/client/TransactionPanel/TransactionPanel";
-// import { SPLProgramInteractions } from "@/components/ui/client/SPL_ProgramInteractions/SPL_ProgramInteractions";
 import { ContractInteractions } from "@/components/ui/client/ContractInteractions/ContractInteractions";
 import { AirDrop } from "@/components/ui/client/AirDrop";
 import { AuthModal } from "@/components/ui/client/Auth/AuthModal";
 import { AuthFlowInfo } from "@/components/ui/client/Auth/AuthFlowInfo";
-import { Text } from "@/components/ui/common";
+import { Text, Button } from "@/components/ui/common";
+import { RouterContainer } from "../components/ui/client/RouterContainer/RouterContainer";
 
 export default function Home() {
   return (
@@ -82,11 +82,6 @@ export default function Home() {
             <TransactionPanel />
           </section>
 
-          {/* SPL Token Program Interactions */}
-          {/* <section>
-            <SPLProgramInteractions />
-          </section> */}
-
           {/* Devnet Token Operations */}
           <section>
             <AirDrop />
@@ -95,6 +90,11 @@ export default function Home() {
           {/* Contract Interactions */}
           <section>
             <ContractInteractions />
+          </section>
+
+          {/* NFTs */}
+          <section>
+            <RouterContainer />
           </section>
         </main>
       </div>
