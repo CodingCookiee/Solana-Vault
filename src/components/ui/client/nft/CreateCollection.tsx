@@ -72,12 +72,16 @@ export function CreateCollection({
 
     try {
       // Upload image first
+      console.log("Starting image upload...");
       const imageUri = await upload(imageFile);
+
       if (!imageUri) {
-        throw new Error("Failed to upload image");
+        console.error("Image upload failed - no URI returned");
+        throw new Error("Failed to upload image - storage upload failed");
       }
 
-      console.log("Image uploaded successfully:", imageUri);
+      // Log as a string to ensure it's a string
+      console.log("Image uploaded successfully:", String(imageUri));
 
       // Create the collection
       console.log("Creating collection...");
@@ -85,7 +89,7 @@ export function CreateCollection({
         name: formData.name,
         symbol: formData.symbol,
         description: formData.description,
-        uri: imageUri,
+        uri: String(imageUri),
       });
 
       if (collection) {
@@ -100,8 +104,27 @@ export function CreateCollection({
       }
     } catch (error) {
       console.error("Error creating collection:", error);
+      alert(
+        `Error: ${
+          error instanceof Error ? error.message : "Unknown error occurred"
+        }`
+      );
     }
   };
+
+  {
+    (createError || uploadError) && (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <Text color="error" variant="small">
+          <strong>Error:</strong> {createError || uploadError}
+          <p className="mt-1 text-xs">
+            Make sure you have sufficient SOL in your wallet and are connected
+            to Devnet.
+          </p>
+        </Text>
+      </div>
+    );
+  }
 
   if (!connected) {
     return (

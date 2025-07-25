@@ -88,6 +88,8 @@ export function useVerifyNFT() {
   return { verify, loading, error };
 }
 
+
+
 export function useImageUpload() {
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -113,7 +115,13 @@ export function useImageUpload() {
         throw new Error("Only image files are allowed");
       }
 
-      return await uploadImage(connection, wallet, file);
+      const uri = await uploadImage(connection, wallet, file);
+      
+      if (!uri) {
+        throw new Error("Failed to get upload URI. Please try again.");
+      }
+      
+      return uri;
     } catch (err) {
       console.error("Upload error:", err);
       const errorMessage =

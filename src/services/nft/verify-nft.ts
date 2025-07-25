@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { WalletContextState } from "@solana/wallet-adapter-react";
-import { Metaplex, keypairIdentity } from "@metaplex-foundation/js";
+import { Metaplex, walletAdapterIdentity } from "@metaplex-foundation/js";
 import { VerifyParams, NFTDetails } from "./nft.types";
 
 export async function verifyNFTInCollection(
@@ -8,15 +8,14 @@ export async function verifyNFTInCollection(
   wallet: WalletContextState,
   params: VerifyParams
 ): Promise<boolean> {
-  if (!wallet.connected || !wallet.publicKey) {
-    throw new Error("Wallet not connected");
+  if (!wallet.connected || !wallet.publicKey || !wallet.signTransaction) {
+    throw new Error("Wallet not properly connected");
   }
 
-  const metaplex = Metaplex.make(connection).use(
-    keypairIdentity(wallet as any)
-  );
-
   try {
+    const metaplex = Metaplex.make(connection)
+      .use(walletAdapterIdentity(wallet));
+
     await metaplex.nfts().verifyCollection({
       mintAddress: params.nftMint,
       collectionMintAddress: params.collectionMint,
@@ -38,11 +37,10 @@ export async function getNFTDetails(
     throw new Error("Wallet not connected");
   }
 
-  const metaplex = Metaplex.make(connection).use(
-    keypairIdentity(wallet as any)
-  );
-
   try {
+    const metaplex = Metaplex.make(connection)
+      .use(walletAdapterIdentity(wallet));
+
     const nft = await metaplex.nfts().findByMint({ mintAddress });
 
     if (!nft) return null;
@@ -56,7 +54,7 @@ export async function getNFTDetails(
       description: metadata.description || "",
       uri: metadata.image || "",
       collection: nft.collection?.address,
-      creator: nft.updateAuthorityAddress,
+      creator: wallet.publicKey,
       verified: nft.collection?.verified || false,
     };
   } catch (error) {

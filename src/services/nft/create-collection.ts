@@ -2,7 +2,7 @@ import { Connection } from "@solana/web3.js";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import {
   Metaplex,
-  keypairIdentity,
+  walletAdapterIdentity,
   irysStorage,
   toMetaplexFile,
 } from "@metaplex-foundation/js";
@@ -13,13 +13,14 @@ export async function uploadImage(
   wallet: WalletContextState,
   imageFile: File
 ): Promise<string> {
-  if (!wallet.connected || !wallet.publicKey) {
-    throw new Error("Wallet not connected");
+  if (!wallet.connected || !wallet.publicKey || !wallet.signTransaction) {
+    throw new Error("Wallet not properly connected");
   }
 
   try {
+    // Use walletAdapterIdentity instead of keypairIdentity
     const metaplex = Metaplex.make(connection)
-      .use(keypairIdentity(wallet as any))
+      .use(walletAdapterIdentity(wallet))
       .use(
         irysStorage({
           address: "https://devnet.bundlr.network",
@@ -28,20 +29,87 @@ export async function uploadImage(
         })
       );
 
+    // Check if we have enough SOL for storage
+    const balance = await connection.getBalance(wallet.publicKey);
+    console.log(`Wallet balance: ${balance / 1e9} SOL`);
+
+    if (balance < 1000000) {
+      // Less than 0.001 SOL
+      throw new Error(
+        "Insufficient SOL balance for storage costs. Please add some SOL to your wallet."
+      );
+    }
+
     // Read the file as an array buffer
     const buffer = await imageFile.arrayBuffer();
     // Convert to Uint8Array which is what Metaplex expects
     const fileData = new Uint8Array(buffer);
 
     // Create a Metaplex file with the binary data
-    const metaplexFile = toMetaplexFile(fileData, imageFile.name);
+    const metaplexFile = toMetaplexFile(fileData, imageFile.name, {
+      contentType: imageFile.type,
+    });
 
-    // Upload the file
-    const { uri } = await metaplex.storage().upload(metaplexFile);
+    console.log(
+      `Uploading file: ${imageFile.name}, size: ${fileData.length} bytes`
+    );
+
+    // Try a direct upload to arweave.net for development purposes
+    const uploadResult = await metaplex.storage().upload(metaplexFile);
+    console.log("Upload result:", uploadResult);
+
+    // Handle both string and object with uri property
+    let uri: string;
+    if (typeof uploadResult === "string") {
+      uri = uploadResult;
+    } else if (
+      uploadResult &&
+      typeof uploadResult === "object" &&
+      "uri" in uploadResult
+    ) {
+      uri = uploadResult.uri;
+    } else {
+      throw new Error("File upload failed - no valid URI returned");
+    }
+
+    if (!uri) {
+      throw new Error("File upload failed - empty URI returned");
+    }
+
+    console.log(`File uploaded successfully: ${uri}`);
     return uri;
   } catch (error) {
     console.error("Error in uploadImage:", error);
-    throw error;
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("insufficient funds")) {
+        throw new Error(
+          "Insufficient funds for storage. Please add more SOL to your wallet."
+        );
+      }
+      if (error.message.includes("Network Error")) {
+        throw new Error(
+          "Network error connecting to storage. Please check your connection and try again."
+        );
+      }
+      if (error.message.includes("User rejected")) {
+        throw new Error(
+          "Transaction was rejected. Please approve the transaction to continue."
+        );
+      }
+      if (error.message.includes("No provider available")) {
+        throw new Error(
+          "Storage provider error. Make sure you're on Devnet and your wallet is properly connected."
+        );
+      }
+    }
+
+    throw new Error(
+      `Failed to upload image: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
 
@@ -50,45 +118,70 @@ export async function createCollection(
   wallet: WalletContextState,
   params: CreateCollectionParams
 ): Promise<CollectionDetails> {
-  if (!wallet.connected || !wallet.publicKey) {
-    throw new Error("Wallet not connected");
+  if (!wallet.connected || !wallet.publicKey || !wallet.signTransaction) {
+    throw new Error("Wallet not properly connected");
   }
 
-  const metaplex = Metaplex.make(connection)
-    .use(keypairIdentity(wallet as any))
-    .use(
-      irysStorage({
-        address: "https://devnet.bundlr.network",
-        providerUrl: "https://api.devnet.solana.com",
-        timeout: 60000,
-      })
-    );
+  try {
+    // Use walletAdapterIdentity instead of keypairIdentity
+    const metaplex = Metaplex.make(connection)
+      .use(walletAdapterIdentity(wallet))
+      .use(
+        irysStorage({
+          address: "https://devnet.bundlr.network",
+          providerUrl: "https://api.devnet.solana.com",
+          timeout: 60000,
+        })
+      );
 
-  // Upload metadata
-  const metadata = {
-    name: params.name,
-    symbol: params.symbol,
-    description: params.description,
-    image: params.uri,
-  };
+    // Upload metadata
+    const metadata = {
+      name: params.name,
+      symbol: params.symbol,
+      description: params.description,
+      image: params.uri,
+    };
 
-  const { uri } = await metaplex.nfts().uploadMetadata(metadata);
+    console.log("Uploading metadata...", metadata);
+    const { uri } = await metaplex.nfts().uploadMetadata(metadata);
+    console.log("Metadata uploaded:", uri);
 
-  // Create collection
-  const { nft } = await metaplex.nfts().create({
-    uri,
-    name: params.name,
-    symbol: params.symbol,
-    sellerFeeBasisPoints: 0,
-    isCollection: true,
-  });
+    // Create collection
+    console.log("Creating collection NFT...");
+    const { nft } = await metaplex.nfts().create({
+      uri,
+      name: params.name,
+      symbol: params.symbol,
+      sellerFeeBasisPoints: 0,
+      isCollection: true,
+    });
 
-  return {
-    mint: nft.address,
-    name: params.name,
-    symbol: params.symbol,
-    description: params.description,
-    uri: params.uri,
-    creator: wallet.publicKey,
-  };
+    console.log("Collection created:", nft.address.toString());
+
+    return {
+      mint: nft.address,
+      name: params.name,
+      symbol: params.symbol,
+      description: params.description,
+      uri: params.uri,
+      creator: wallet.publicKey,
+    };
+  } catch (error) {
+    console.error("Error creating collection:", error);
+
+    if (error instanceof Error) {
+      if (error.message.includes("insufficient funds")) {
+        throw new Error(
+          "Insufficient funds to create collection. Please add more SOL to your wallet."
+        );
+      }
+      if (error.message.includes("User rejected")) {
+        throw new Error(
+          "Transaction was rejected. Please approve the transaction to continue."
+        );
+      }
+    }
+
+    throw new Error("Failed to create collection. Please try again.");
+  }
 }
