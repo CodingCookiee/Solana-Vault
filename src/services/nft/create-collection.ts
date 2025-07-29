@@ -6,7 +6,8 @@ import {
   irysStorage,
   toMetaplexFile,
 } from "@metaplex-foundation/js";
-import { CreateCollectionParams, CollectionDetails } from "./nft.types";
+import { CreateCollectionParams, CollectionDetails } from "./nft.types";1
+import { uploadToIPFS, uploadMetadataToIPFS } from "./ipfs-upload";
 
 export async function uploadImage(
   connection: Connection,
@@ -124,17 +125,9 @@ export async function createCollection(
 
   try {
     // Use walletAdapterIdentity instead of keypairIdentity
-    const metaplex = Metaplex.make(connection)
-      .use(walletAdapterIdentity(wallet))
-      .use(
-        irysStorage({
-          address: "https://devnet.bundlr.network",
-          providerUrl: "https://api.devnet.solana.com",
-          timeout: 60000,
-        })
-      );
+    const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(wallet));
 
-    // Upload metadata
+    // Create metadata object
     const metadata = {
       name: params.name,
       symbol: params.symbol,
@@ -142,14 +135,42 @@ export async function createCollection(
       image: params.uri,
     };
 
-    console.log("Uploading metadata...", metadata);
-    const { uri } = await metaplex.nfts().uploadMetadata(metadata);
-    console.log("Metadata uploaded:", uri);
+    console.log("Uploading metadata to IPFS...", metadata);
+
+    // Try to upload metadata to IPFS first
+    let metadataUri: string;
+    try {
+      metadataUri = await uploadMetadataToIPFS(metadata);
+      console.log("Metadata uploaded to IPFS:", metadataUri);
+    } catch (ipfsError) {
+      console.warn("IPFS metadata upload failed, falling back to Arweave:", ipfsError);
+      
+      // Fallback to Arweave
+      const metaplexWithIrys = metaplex.use(
+        irysStorage({
+          address: "https://devnet.bundlr.network",
+          providerUrl: "https://api.devnet.solana.com",
+          timeout: 60000,
+        })
+      );
+      
+      const uploadResult = await metaplexWithIrys.nfts().uploadMetadata(metadata);
+      
+      if (typeof uploadResult === "string") {
+        metadataUri = uploadResult;
+      } else if (uploadResult && typeof uploadResult === "object" && "uri" in uploadResult) {
+        metadataUri = uploadResult.uri;
+      } else {
+        throw new Error("Metadata upload failed - no valid URI returned");
+      }
+      
+      console.log("Metadata uploaded to Arweave:", metadataUri);
+    }
 
     // Create collection
     console.log("Creating collection NFT...");
     const { nft } = await metaplex.nfts().create({
-      uri,
+      uri: metadataUri,
       name: params.name,
       symbol: params.symbol,
       sellerFeeBasisPoints: 0,

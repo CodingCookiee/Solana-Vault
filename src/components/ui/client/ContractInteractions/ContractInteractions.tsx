@@ -157,32 +157,6 @@ export const ContractInteractions: React.FC = () => {
             </Button>
           </CardContent>
         </Card>
-
-        {/* SPL Program  Interactions */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                SPL Program Interactions
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="body" color="muted">
-                Interact with SPL token programs, manage token accounts, and
-                perform token transfers
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              onClick={() => router.push("/spl")}
-              variant="default"
-              className="w-full"
-            >
-              Go to SPL Program Interactions
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </AuthGate>
   );

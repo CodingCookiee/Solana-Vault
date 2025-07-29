@@ -12,17 +12,19 @@ import { Text } from "@/components/ui/common/text";
 import { CreateCollection } from "./CreateCollection";
 import { CreateNFT } from "./CreateNFT";
 import { VerifyNFT } from "./VerifyNFT";
+import { MyNFTs } from "./MyNFTs";
 import { CollectionDetails, NFTDetails } from "@/services/nft/nft.types";
 
-type ActiveTab = "collection" | "nft" | "verify";
+type ActiveTab = "collection" | "nft" | "verify" | "my-nfts";
 
 export function NFTContainer() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("collection");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("my-nfts");
   const [createdCollection, setCreatedCollection] =
     useState<CollectionDetails | null>(null);
   const [createdNFT, setCreatedNFT] = useState<NFTDetails | null>(null);
 
   const tabs = [
+    { id: "my-nfts" as ActiveTab, label: "My NFTs", icon: "💎" },
     { id: "collection" as ActiveTab, label: "Create Collection", icon: "📁" },
     { id: "nft" as ActiveTab, label: "Create NFT", icon: "🖼️" },
     { id: "verify" as ActiveTab, label: "Verify NFT", icon: "✅" },
@@ -30,29 +32,28 @@ export function NFTContainer() {
 
   const handleCollectionCreated = (collection: CollectionDetails) => {
     setCreatedCollection(collection);
-    // Automatically move to NFT creation after collection is created
     setActiveTab("nft");
   };
 
   const handleNFTCreated = (nft: NFTDetails) => {
     setCreatedNFT(nft);
-    // If NFT has a collection, move to verification tab
     if (nft.collection) {
       setActiveTab("verify");
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-6">
       {/* Header with title and description */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span>🎨</span>
-            Solana NFT System
+            Solana NFT Studio
           </CardTitle>
           <Text color="secondary" variant="small">
-            Create collections, mint NFTs, and verify collection membership
+            Create collections, mint NFTs, verify collection membership, and
+            track your creations
           </Text>
         </CardHeader>
       </Card>
@@ -61,7 +62,7 @@ export function NFTContainer() {
       {(createdCollection || createdNFT) && (
         <Card>
           <CardHeader>
-            <CardTitle variant="small">Created Items</CardTitle>
+            <CardTitle variant="small">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {createdCollection && (
@@ -119,6 +120,8 @@ export function NFTContainer() {
 
       {/* Tab content */}
       <div className="min-h-[600px]">
+        {activeTab === "my-nfts" && <MyNFTs />}
+
         {activeTab === "collection" && (
           <CreateCollection onCollectionCreated={handleCollectionCreated} />
         )}
@@ -133,54 +136,58 @@ export function NFTContainer() {
         {activeTab === "verify" && <VerifyNFT />}
       </div>
 
-      {/* Workflow guide */}
+      {/* Setup Guide */}
       <Card>
         <CardHeader>
-          <CardTitle variant="small">How to Use</CardTitle>
+          <CardTitle variant="small">Setup Guide</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-blue-500 dark:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                1
-              </div>
-              <div>
-                <Text variant="small" weight="medium">
-                  Create Collection
-                </Text>
-                <Text variant="extraSmall" color="muted">
-                  First, create an NFT collection that will serve as the parent
-                  for your NFTs
-                </Text>
-              </div>
-            </div>
+          
 
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-green-500 dark:bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                2
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 dark:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                  1
+                </div>
+                <div>
+                  <Text variant="small" weight="medium">
+                    Create Collection
+                  </Text>
+                  <Text variant="extraSmall" color="muted">
+                    Start by creating an NFT collection that will serve as the
+                    parent for your NFTs
+                  </Text>
+                </div>
               </div>
-              <div>
-                <Text variant="small" weight="medium">
-                  Create NFT
-                </Text>
-                <Text variant="extraSmall" color="muted">
-                  Mint an NFT and assign it to your collection
-                </Text>
-              </div>
-            </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-purple-500 dark:bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                3
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-green-500 dark:bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                  2
+                </div>
+                <div>
+                  <Text variant="small" weight="medium">
+                    Create NFT
+                  </Text>
+                  <Text variant="extraSmall" color="muted">
+                    Mint an NFT and assign it to your collection
+                  </Text>
+                </div>
               </div>
-              <div>
-                <Text variant="small" weight="medium">
-                  Verify NFT
-                </Text>
-                <Text variant="extraSmall" color="muted">
-                  Verify that your NFT belongs to the collection to establish
-                  authenticity
-                </Text>
+
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-purple-500 dark:bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                  3
+                </div>
+                <div>
+                  <Text variant="small" weight="medium">
+                    Verify NFT
+                  </Text>
+                  <Text variant="extraSmall" color="muted">
+                    Verify that your NFT belongs to the collection to establish
+                    authenticity
+                  </Text>
+                </div>
               </div>
             </div>
           </div>

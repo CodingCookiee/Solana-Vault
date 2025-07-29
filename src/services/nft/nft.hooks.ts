@@ -4,6 +4,15 @@ import { PublicKey } from "@solana/web3.js";
 import { createCollection, uploadImage } from "./create-collection";
 import { createNFT } from "./create-nft";
 import { verifyNFTInCollection, getNFTDetails } from "./verify-nft";
+import { uploadToIPFS } from "./ipfs-upload";
+import {
+  saveCollection,
+  saveNFT,
+  getStoredCollections,
+  getStoredNFTs,
+  StoredCollection,
+  StoredNFT,
+} from "./storage";
 import {
   CreateCollectionParams,
   CreateNFTParams,
@@ -24,7 +33,11 @@ export function useCreateCollection() {
     try {
       setLoading(true);
       setError(null);
-      return await createCollection(connection, wallet, params);
+      const result = await createCollection(connection, wallet, params);
+      if (result) {
+        saveCollection(result, params.uri);
+      }
+      return result;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to create collection";
@@ -50,7 +63,11 @@ export function useCreateNFT() {
     try {
       setLoading(true);
       setError(null);
-      return await createNFT(connection, wallet, params);
+      const result = await createNFT(connection, wallet, params);
+      if (result) {
+        saveNFT(result, params.uri);
+      }
+      return result;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to create NFT";
@@ -88,13 +105,12 @@ export function useVerifyNFT() {
   return { verify, loading, error };
 }
 
-
-
 export function useImageUpload() {
   const { connection } = useConnection();
   const wallet = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<"arweave" | "ipfs">("ipfs");
 
   const upload = async (file: File): Promise<string | null> => {
     try {
@@ -105,7 +121,7 @@ export function useImageUpload() {
         throw new Error("No file selected");
       }
 
-      // Check file size (10MB limit for example)
+      // Check file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         throw new Error("File size exceeds 10MB limit");
       }
@@ -115,25 +131,45 @@ export function useImageUpload() {
         throw new Error("Only image files are allowed");
       }
 
-      const uri = await uploadImage(connection, wallet, file);
-      
+      let uri: string;
+
+      if (uploadMethod === "ipfs") {
+        console.log("Uploading to IPFS via Pinata...");
+        uri = await uploadToIPFS(file);
+      } else {
+        console.log("Uploading to Arweave...");
+        uri = await uploadImage(connection, wallet, file);
+      }
+
       if (!uri) {
         throw new Error("Failed to get upload URI. Please try again.");
       }
-      
+
       return uri;
     } catch (err) {
       console.error("Upload error:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Failed to upload image";
       setError(errorMessage);
+
+      // Try alternative upload method on failure
+      if (
+        uploadMethod === "arweave" &&
+        err instanceof Error &&
+        err.message.includes("Arweave")
+      ) {
+        console.log("Arweave failed, switching to IPFS...");
+        setUploadMethod("ipfs");
+        return null;
+      }
+
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  return { upload, loading, error };
+  return { upload, loading, error, uploadMethod, setUploadMethod };
 }
 
 export function useNFTDetails() {
@@ -161,4 +197,32 @@ export function useNFTDetails() {
   };
 
   return { fetchDetails, loading, error };
+}
+
+export function useStoredItems() {
+  const [collections, setCollections] = useState<StoredCollection[]>([]);
+  const [nfts, setNfts] = useState<StoredNFT[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadStoredItems = () => {
+    try {
+      setLoading(true);
+      const storedCollections = getStoredCollections();
+      const storedNFTs = getStoredNFTs();
+      setCollections(storedCollections);
+      setNfts(storedNFTs);
+    } catch (error) {
+      console.error("Error loading stored items:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    collections,
+    nfts,
+    loading,
+    loadStoredItems,
+    refreshItems: loadStoredItems,
+  };
 }

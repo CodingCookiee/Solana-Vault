@@ -26,7 +26,13 @@ export function CreateCollection({
     loading: creating,
     error: createError,
   } = useCreateCollection();
-  const { upload, loading: uploading, error: uploadError } = useImageUpload();
+  const {
+    upload,
+    loading: uploading,
+    error: uploadError,
+    uploadMethod,
+    setUploadMethod,
+  } = useImageUpload();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -61,18 +67,18 @@ export function CreateCollection({
     e.preventDefault();
 
     if (!connected) {
-      alert("Please connect your wallet first");
+      console.error("Please connect your wallet first");
       return;
     }
 
     if (!imageFile) {
-      alert("Please select an image for the collection");
+      console.error("Please select an image for the collection");
       return;
     }
 
     try {
       // Upload image first
-      console.log("Starting image upload...");
+      console.log(`Starting image upload via ${uploadMethod}...`);
       const imageUri = await upload(imageFile);
 
       if (!imageUri) {
@@ -80,7 +86,6 @@ export function CreateCollection({
         throw new Error("Failed to upload image - storage upload failed");
       }
 
-      // Log as a string to ensure it's a string
       console.log("Image uploaded successfully:", String(imageUri));
 
       // Create the collection
@@ -104,27 +109,13 @@ export function CreateCollection({
       }
     } catch (error) {
       console.error("Error creating collection:", error);
-      alert(
+      console.log(
         `Error: ${
           error instanceof Error ? error.message : "Unknown error occurred"
         }`
       );
     }
   };
-
-  {
-    (createError || uploadError) && (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <Text color="error" variant="small">
-          <strong>Error:</strong> {createError || uploadError}
-          <p className="mt-1 text-xs">
-            Make sure you have sufficient SOL in your wallet and are connected
-            to Devnet.
-          </p>
-        </Text>
-      </div>
-    );
-  }
 
   if (!connected) {
     return (
@@ -146,6 +137,38 @@ export function CreateCollection({
       <CardContent>
         {!createdCollection ? (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Upload Method Selector */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Storage Method
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="ipfs"
+                    checked={uploadMethod === "ipfs"}
+                    onChange={(e) => setUploadMethod("ipfs")}
+                    className="mr-2"
+                  />
+                  IPFS (Pinata) - Recommended
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="arweave"
+                    checked={uploadMethod === "arweave"}
+                    onChange={(e) => setUploadMethod("arweave")}
+                    className="mr-2"
+                  />
+                  Arweave (Irys)
+                </label>
+              </div>
+              <Text variant="extraSmall" color="muted">
+                IPFS provides faster and more reliable uploads
+              </Text>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -224,6 +247,11 @@ export function CreateCollection({
                 <Text color="error" variant="small">
                   {createError || uploadError}
                 </Text>
+                {uploadMethod === "arweave" && uploadError && (
+                  <Text variant="extraSmall" color="muted" className="mt-2">
+                    Try switching to IPFS for more reliable uploads
+                  </Text>
+                )}
               </div>
             )}
 
@@ -233,7 +261,7 @@ export function CreateCollection({
               className="w-full"
             >
               {creating || uploading
-                ? "Creating Collection..."
+                ? `Creating Collection... (${uploadMethod.toUpperCase()})`
                 : "Create Collection"}
             </Button>
           </form>
