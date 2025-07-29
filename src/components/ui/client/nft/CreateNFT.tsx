@@ -53,16 +53,35 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
     }
   };
 
+  const validateCollectionMint = (address: string): boolean => {
+    if (!address.trim()) return true; // Optional field
+    try {
+      new PublicKey(address);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!connected) {
-      alert("Please connect your wallet first");
+      console.error("Please connect your wallet first");
       return;
     }
 
     if (!imageFile) {
-      alert("Please select an image for the NFT");
+      console.error("Please select an image for the NFT");
+      return;
+    }
+
+    // Validate collection mint address if provided
+    if (
+      formData.collectionMintAddress &&
+      !validateCollectionMint(formData.collectionMintAddress)
+    ) {
+      console.error("Invalid collection mint address format");
       return;
     }
 
@@ -73,15 +92,26 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
         throw new Error("Failed to upload image");
       }
 
+      // Prepare collection mint
+      let collectionMintKey: PublicKey | undefined;
+      if (formData.collectionMintAddress.trim()) {
+        try {
+          collectionMintKey = new PublicKey(formData.collectionMintAddress);
+        } catch (error) {
+          console.warn(
+            "Invalid collection mint address, creating NFT without collection"
+          );
+          collectionMintKey = undefined;
+        }
+      }
+
       // Create the NFT
       const nft = await create({
         name: formData.name,
         symbol: formData.symbol,
         description: formData.description,
         uri: imageUri,
-        collectionMint: formData.collectionMintAddress
-          ? new PublicKey(formData.collectionMintAddress)
-          : undefined,
+        collectionMint: collectionMintKey,
       });
 
       if (nft) {
@@ -179,20 +209,27 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
                 name="collectionMintAddress"
                 value={formData.collectionMintAddress}
                 onChange={handleInputChange}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Collection mint address"
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  formData.collectionMintAddress &&
+                  !validateCollectionMint(formData.collectionMintAddress)
+                    ? "border-red-500"
+                    : ""
+                }`}
+                placeholder="Enter collection mint address (optional)"
               />
+              {formData.collectionMintAddress &&
+                !validateCollectionMint(formData.collectionMintAddress) && (
+                  <Text variant="small" color="error" className="mt-1">
+                    Invalid collection mint address format
+                  </Text>
+                )}
             </div>
 
             <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                htmlFor="image-upload"
-              >
+              <label className="block text-sm font-medium mb-2">
                 NFT Image *
               </label>
               <input
-                id="image-upload"
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
@@ -223,35 +260,53 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
               disabled={creating || uploading}
               className="w-full"
             >
-              {creating || uploading ? "Creating NFT..." : "Create NFT"}
+              {uploading
+                ? "Uploading Image..."
+                : creating
+                ? "Creating NFT..."
+                : "Create NFT"}
             </Button>
           </form>
         ) : (
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-center space-y-4">
+            <div className="p-6 bg-green-50 border border-green-200 rounded-lg">
               <Text color="success" weight="medium" className="mb-2">
                 NFT Created Successfully!
               </Text>
-              <div className="space-y-2">
-                <Text variant="small">
-                  <strong>Mint Address:</strong> {createdNFT.mint.toString()}
+              <Text variant="small" color="muted">
+                Mint Address: {createdNFT.mint.toString()}
+              </Text>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Text variant="small" color="muted">
+                  Name:
                 </Text>
-                <Text variant="small">
-                  <strong>Name:</strong> {createdNFT.name}
+                <Text variant="small">{createdNFT.name}</Text>
+              </div>
+              <div className="flex items-center justify-between">
+                <Text variant="small" color="muted">
+                  Symbol:
                 </Text>
-                <Text variant="small">
-                  <strong>Symbol:</strong> {createdNFT.symbol}
+                <Text variant="small">{createdNFT.symbol}</Text>
+              </div>
+              <div className="flex items-center justify-between">
+                <Text variant="small" color="muted">
+                  Description:
                 </Text>
-                <Text variant="small">
-                  <strong>Creator:</strong> {createdNFT.creator.toString()}
-                </Text>
-                {createdNFT.collection && (
-                  <Text variant="small">
-                    <strong>Collection:</strong>{" "}
+                <Text variant="small">{createdNFT.description}</Text>
+              </div>
+              {createdNFT.collection && (
+                <div className="flex items-center justify-between">
+                  <Text variant="small" color="muted">
+                    Collection:
+                  </Text>
+                  <Text variant="small" className="font-mono text-xs">
                     {createdNFT.collection.toString()}
                   </Text>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <Button

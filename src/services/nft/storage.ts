@@ -48,6 +48,50 @@ export function saveNFT(nft: NFTDetails, imageUrl?: string): void {
   }
 }
 
+// Add this new function to update NFT verification status
+export function updateNFTVerificationStatus(
+  mintAddress: string,
+  verified: boolean
+): void {
+  try {
+    const nfts = getStoredNFTs();
+    const updatedNFTs = nfts.map((nft) => {
+      if (nft.mint.toString() === mintAddress) {
+        return { ...nft, verified };
+      }
+      return nft;
+    });
+    localStorage.setItem(NFTS_KEY, JSON.stringify(updatedNFTs));
+  } catch (error) {
+    console.error("Error updating NFT verification status:", error);
+  }
+}
+
+// Add this function to update an entire NFT record
+export function updateStoredNFT(
+  mintAddress: string,
+  updatedNFT: NFTDetails
+): void {
+  try {
+    const nfts = getStoredNFTs();
+    const updatedNFTs = nfts.map((nft) => {
+      if (nft.mint.toString() === mintAddress) {
+        return {
+          ...nft,
+          ...updatedNFT,
+          // Preserve the original createdAt and imageUrl
+          createdAt: nft.createdAt,
+          imageUrl: nft.imageUrl,
+        };
+      }
+      return nft;
+    });
+    localStorage.setItem(NFTS_KEY, JSON.stringify(updatedNFTs));
+  } catch (error) {
+    console.error("Error updating stored NFT:", error);
+  }
+}
+
 export function getStoredCollections(): StoredCollection[] {
   try {
     const stored = localStorage.getItem(COLLECTIONS_KEY);

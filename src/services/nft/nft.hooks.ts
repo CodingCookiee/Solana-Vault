@@ -11,6 +11,7 @@ import {
   getStoredCollections,
   getStoredNFTs,
   StoredCollection,
+  updateStoredNFT,
   StoredNFT,
 } from "./storage";
 import {
@@ -185,7 +186,14 @@ export function useNFTDetails() {
       setLoading(true);
       setError(null);
       const publicKey = new PublicKey(mintAddress);
-      return await getNFTDetails(connection, wallet, publicKey);
+      const details = await getNFTDetails(connection, wallet, publicKey);
+
+      // Update local storage with the latest details if the NFT exists there
+      if (details) {
+        updateStoredNFT(mintAddress, details);
+      }
+
+      return details;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch NFT details";

@@ -3,9 +3,11 @@ import { WalletContextState } from "@solana/wallet-adapter-react";
 import {
   Metaplex,
   walletAdapterIdentity,
-  irysStorage,
+  toMetaplexFile,
+  CreateNftInput,
 } from "@metaplex-foundation/js";
 import { CreateNFTParams, NFTDetails } from "./nft.types";
+import { uploadMetadataToIPFS } from "./ipfs-upload";
 
 export async function createNFT(
   connection: Connection,
@@ -17,28 +19,23 @@ export async function createNFT(
   }
 
   try {
-    // Use walletAdapterIdentity instead of keypairIdentity
-    const metaplex = Metaplex.make(connection)
-      .use(walletAdapterIdentity(wallet))
-      .use(
-        irysStorage({
-          address: "https://devnet.bundlr.network",
-          providerUrl: "https://api.devnet.solana.com",
-          timeout: 60000,
-        })
-      );
+    console.log("Starting NFT creation with params:", params);
+
+    // Initialize Metaplex
+    const metaplex = Metaplex.make(connection).use(
+      walletAdapterIdentity(wallet)
+    );
 
     // Check balance
     const balance = await connection.getBalance(wallet.publicKey);
     if (balance < 1000000) {
-      // Less than 0.001 SOL
       throw new Error("Insufficient SOL balance for NFT creation costs.");
     }
 
     // Ensure uri is a string
     const imageUri = String(params.uri);
 
-    // Upload metadata
+    // Create metadata object
     const metadata = {
       name: params.name,
       symbol: params.symbol,
@@ -47,66 +44,89 @@ export async function createNFT(
     };
 
     console.log("Uploading NFT metadata...", metadata);
-    const metadataResult = await metaplex.nfts().uploadMetadata(metadata);
 
-    let metadataUri: string;
-    if (typeof metadataResult === "string") {
-      metadataUri = metadataResult;
-    } else if (
-      metadataResult &&
-      typeof metadataResult === "object" &&
-      "uri" in metadataResult
-    ) {
-      metadataUri = metadataResult.uri;
-    } else {
-      throw new Error("Metadata upload failed - no valid URI returned");
-    }
+    // Upload metadata to IPFS
+    const metadataUri = await uploadMetadataToIPFS(metadata);
+    console.log("NFT metadata uploaded to IPFS:", metadataUri);
 
-    console.log("NFT metadata uploaded:", metadataUri);
-
-    // Create NFT
-    console.log("Creating NFT...");
-    const { nft } = await metaplex.nfts().create({
+    // Prepare NFT creation input
+    const nftInput: CreateNftInput = {
       uri: metadataUri,
       name: params.name,
       symbol: params.symbol,
       sellerFeeBasisPoints: 0,
-      collection: params.collectionMint
-        ? {
-            address: params.collectionMint,
-            verified: false,
-          }
-        : undefined,
-    });
+      creators: [
+        {
+          address: wallet.publicKey,
+          verified: true,
+          share: 100,
+        },
+      ],
+      isMutable: true,
+      maxSupply: 0, // 0 means unlimited, 1 means unique NFT
+    };
 
-    console.log("NFT created:", nft.address.toString());
+    // Add collection if provided
+    if (params.collectionMint) {
+      try {
+        // Ensure collectionMint is a proper PublicKey
+        const collectionPublicKey =
+          typeof params.collectionMint === "string"
+            ? new PublicKey(params.collectionMint)
+            : params.collectionMint;
 
-    return {
+        console.log("Adding to collection:", collectionPublicKey.toString());
+        nftInput.collection = collectionPublicKey;
+      } catch (error) {
+        console.warn(
+          "Invalid collection mint address, creating NFT without collection:",
+          error
+        );
+        // Continue without collection rather than failing
+      }
+    }
+
+    console.log("Creating NFT...");
+    console.log("Creating NFT with input:", nftInput);
+
+    // Create the NFT
+    const { nft } = await metaplex.nfts().create(nftInput);
+
+    console.log("NFT created successfully:", nft.address.toString());
+
+    // Return NFT details
+    const nftDetails: NFTDetails = {
       mint: nft.address,
       name: params.name,
       symbol: params.symbol,
       description: params.description,
       uri: imageUri,
-      collection: params.collectionMint,
+      collection: params.collectionMint || undefined,
       creator: wallet.publicKey,
-      verified: false,
+      verified: false, // Will be true after verification
     };
+
+    return nftDetails;
   } catch (error) {
     console.error("Error creating NFT:", error);
 
+    // Provide more specific error messages
     if (error instanceof Error) {
-      if (error.message.includes("insufficient funds")) {
+      if (error.message.includes("toBytes")) {
         throw new Error(
-          "Insufficient funds to create NFT. Please add more SOL to your wallet."
+          "Invalid data format. Please check your collection mint address and try again."
         );
-      }
-      if (error.message.includes("User rejected")) {
+      } else if (error.message.includes("insufficient")) {
         throw new Error(
-          "Transaction was rejected. Please approve the transaction to continue."
+          "Insufficient SOL balance. Please add more SOL to your wallet."
+        );
+      } else if (error.message.includes("Invalid public key")) {
+        throw new Error(
+          "Invalid collection mint address format. Please verify the address."
         );
       }
     }
 
-    throw new Error("Failed to create NFT. Please try again.");
+    throw error;
   }
 }

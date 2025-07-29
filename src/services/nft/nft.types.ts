@@ -36,6 +36,7 @@ export interface CollectionDetails {
   description: string;
   uri: string;
   creator: PublicKey;
+  verified: boolean;
 }
 
 export interface NFTDetails {
@@ -53,4 +54,10 @@ export interface VerifyParams {
   nftMint: PublicKey;
   collectionMint: PublicKey;
   creator: PublicKey;
+}
+
+export interface TransactionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
 }
