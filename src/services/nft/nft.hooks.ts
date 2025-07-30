@@ -31,6 +31,12 @@ export function useCreateCollection() {
   const create = async (
     params: CreateCollectionParams
   ): Promise<CollectionDetails | null> => {
+    // Prevent multiple simultaneous calls
+    if (loading) {
+      console.warn("Collection creation already in progress");
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -61,6 +67,12 @@ export function useCreateNFT() {
   const create = async (
     params: CreateNFTParams
   ): Promise<NFTDetails | null> => {
+    // Prevent multiple simultaneous calls
+    if (loading) {
+      console.warn("NFT creation already in progress");
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -89,6 +101,12 @@ export function useVerifyNFT() {
   const [error, setError] = useState<string | null>(null);
 
   const verify = async (params: VerifyParams): Promise<boolean> => {
+    // Prevent multiple simultaneous calls
+    if (loading) {
+      console.warn("NFT verification already in progress");
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);

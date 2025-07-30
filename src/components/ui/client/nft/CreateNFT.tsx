@@ -33,6 +33,7 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [createdNFT, setCreatedNFT] = useState<NFTDetails | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -76,6 +77,12 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
       return;
     }
 
+    // Prevent double submission
+    if (isSubmitting || creating || uploading) {
+      console.warn("Already processing request...");
+      return;
+    }
+
     // Validate collection mint address if provided
     if (
       formData.collectionMintAddress &&
@@ -86,6 +93,8 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
     }
 
     try {
+      setIsSubmitting(true);
+
       // Upload image first
       const imageUri = await upload(imageFile);
       if (!imageUri) {
@@ -130,6 +139,8 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
       }
     } catch (error) {
       console.error("Error creating NFT:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -257,12 +268,12 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
 
             <Button
               type="submit"
-              disabled={creating || uploading}
+              disabled={creating || uploading || isSubmitting}
               className="w-full"
             >
               {uploading
                 ? "Uploading Image..."
-                : creating
+                : creating || isSubmitting
                 ? "Creating NFT..."
                 : "Create NFT"}
             </Button>

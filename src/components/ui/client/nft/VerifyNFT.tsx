@@ -29,10 +29,26 @@ export function VerifyNFT() {
   });
   const [nftDetails, setNftDetails] = useState<NFTDetails | null>(null);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validatePublicKey = (address: string): boolean => {
+    if (!address.trim()) return false;
+    try {
+      new PublicKey(address);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Reset verification success when inputs change
+    if (verificationSuccess) {
+      setVerificationSuccess(false);
+    }
   };
 
   const handleFetchDetails = async () => {
@@ -41,9 +57,22 @@ export function VerifyNFT() {
       return;
     }
 
+    if (!validatePublicKey(formData.nftMint)) {
+      alert("Please enter a valid NFT mint address");
+      return;
+    }
+
     try {
       const details = await fetchDetails(formData.nftMint);
       setNftDetails(details);
+
+      if (details?.collection) {
+        // Auto-fill collection mint if NFT has a collection
+        setFormData((prev) => ({
+          ...prev,
+          collectionMint: details.collection?.toString() || prev.collectionMint,
+        }));
+      }
     } catch (error) {
       console.error("Error fetching NFT details:", error);
     }
@@ -62,10 +91,29 @@ export function VerifyNFT() {
       return;
     }
 
+    if (!validatePublicKey(formData.nftMint)) {
+      alert("Please enter a valid NFT mint address");
+      return;
+    }
+
+    if (!validatePublicKey(formData.collectionMint)) {
+      alert("Please enter a valid Collection mint address");
+      return;
+    }
+
+    // Prevent double submission
+    if (isSubmitting || verifying || fetching) {
+      console.warn("Already processing request...");
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
+
       const nftMint = new PublicKey(formData.nftMint);
       const collectionMint = new PublicKey(formData.collectionMint);
 
+      console.log("Starting verification process...");
       const success = await verify({
         nftMint,
         collectionMint,
@@ -74,12 +122,16 @@ export function VerifyNFT() {
 
       if (success) {
         setVerificationSuccess(true);
+        console.log("Verification successful, refreshing NFT details...");
+
         // Refresh NFT details after verification
         const updatedDetails = await fetchDetails(formData.nftMint);
         setNftDetails(updatedDetails);
       }
     } catch (error) {
       console.error("Error verifying NFT:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -99,6 +151,10 @@ export function VerifyNFT() {
     <Card className="w-full max-w-2xl">
       <CardHeader>
         <CardTitle>Verify NFT in Collection</CardTitle>
+        <Text variant="small" color="muted">
+          Verify that an NFT belongs to a specific collection to establish
+          authenticity
+        </Text>
       </CardHeader>
       <CardContent className="space-y-6">
         <form onSubmit={handleVerify} className="space-y-4">
@@ -113,18 +169,34 @@ export function VerifyNFT() {
                 value={formData.nftMint}
                 onChange={handleInputChange}
                 required
-                className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={verifying || fetching || isSubmitting}
+                className={`flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
+                  formData.nftMint && !validatePublicKey(formData.nftMint)
+                    ? "border-red-500"
+                    : ""
+                }`}
                 placeholder="Enter NFT mint address"
               />
               <Button
                 type="button"
                 onClick={handleFetchDetails}
-                disabled={fetching || !formData.nftMint}
+                disabled={
+                  fetching ||
+                  !formData.nftMint ||
+                  !validatePublicKey(formData.nftMint) ||
+                  verifying ||
+                  isSubmitting
+                }
                 variant="outline"
               >
                 {fetching ? "Loading..." : "Fetch"}
               </Button>
             </div>
+            {formData.nftMint && !validatePublicKey(formData.nftMint) && (
+              <Text variant="small" color="error" className="mt-1">
+                Invalid NFT mint address format
+              </Text>
+            )}
           </div>
 
           <div>
@@ -137,9 +209,21 @@ export function VerifyNFT() {
               value={formData.collectionMint}
               onChange={handleInputChange}
               required
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              disabled={verifying || fetching || isSubmitting}
+              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
+                formData.collectionMint &&
+                !validatePublicKey(formData.collectionMint)
+                  ? "border-red-500"
+                  : ""
+              }`}
               placeholder="Enter collection mint address"
             />
+            {formData.collectionMint &&
+              !validatePublicKey(formData.collectionMint) && (
+                <Text variant="small" color="error" className="mt-1">
+                  Invalid collection mint address format
+                </Text>
+              )}
           </div>
 
           {(verifyError || fetchError) && (
@@ -147,19 +231,38 @@ export function VerifyNFT() {
               <Text color="error" variant="small">
                 {verifyError || fetchError}
               </Text>
+              {(verifyError?.includes("already been processed") ||
+                verifyError?.includes("already in progress")) && (
+                <Text variant="extraSmall" color="muted" className="mt-2">
+                  Please check the verification status and refresh if the NFT
+                  was verified successfully
+                </Text>
+              )}
             </div>
           )}
 
           {verificationSuccess && (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <Text color="success" weight="medium">
-                NFT verified successfully in collection!
+                NFT verified successfully in collection! ✅
               </Text>
             </div>
           )}
 
-          <Button type="submit" disabled={verifying} className="w-full">
-            {verifying ? "Verifying..." : "Verify NFT in Collection"}
+          <Button
+            type="submit"
+            disabled={
+              verifying ||
+              fetching ||
+              isSubmitting ||
+              !validatePublicKey(formData.nftMint) ||
+              !validatePublicKey(formData.collectionMint)
+            }
+            className="w-full"
+          >
+            {verifying || isSubmitting
+              ? "Verifying..."
+              : "Verify NFT in Collection"}
           </Button>
         </form>
 
@@ -185,14 +288,26 @@ export function VerifyNFT() {
                 <Text variant="small" color="muted">
                   Description:
                 </Text>
-                <Text variant="small">{nftDetails.description}</Text>
+                <Text variant="small" className="text-right max-w-xs">
+                  {nftDetails.description || "No description"}
+                </Text>
               </div>
+              {nftDetails.collection && (
+                <div className="flex items-center justify-between">
+                  <Text variant="small" color="muted">
+                    Collection:
+                  </Text>
+                  <Text variant="small" className="font-mono text-xs">
+                    {nftDetails.collection.toString().slice(0, 8)}...
+                  </Text>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <Text variant="small" color="muted">
                   Creator:
                 </Text>
                 <Text variant="small" className="font-mono text-xs">
-                  {nftDetails.creator.toString()}
+                  {nftDetails.creator.toString().slice(0, 8)}...
                 </Text>
               </div>
               <div className="flex items-center justify-between">
@@ -222,6 +337,9 @@ export function VerifyNFT() {
                     src={nftDetails.uri}
                     alt={nftDetails.name}
                     className="w-32 h-32 object-cover rounded-lg border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 </div>
               )}

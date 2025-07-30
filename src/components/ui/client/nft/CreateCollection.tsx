@@ -43,6 +43,7 @@ export function CreateCollection({
   const [imagePreview, setImagePreview] = useState<string>("");
   const [createdCollection, setCreatedCollection] =
     useState<CollectionDetails | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -76,7 +77,15 @@ export function CreateCollection({
       return;
     }
 
+    // Prevent double submission
+    if (isSubmitting || creating || uploading) {
+      console.warn("Already processing request...");
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
+
       // Upload image first
       console.log(`Starting image upload via ${uploadMethod}...`);
       const imageUri = await upload(imageFile);
@@ -114,6 +123,8 @@ export function CreateCollection({
           error instanceof Error ? error.message : "Unknown error occurred"
         }`
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -150,6 +161,7 @@ export function CreateCollection({
                     checked={uploadMethod === "ipfs"}
                     onChange={(e) => setUploadMethod("ipfs")}
                     className="mr-2"
+                    disabled={creating || uploading || isSubmitting}
                   />
                   IPFS (Pinata) - Recommended
                 </label>
@@ -160,6 +172,7 @@ export function CreateCollection({
                     checked={uploadMethod === "arweave"}
                     onChange={(e) => setUploadMethod("arweave")}
                     className="mr-2"
+                    disabled={creating || uploading || isSubmitting}
                   />
                   Arweave (Irys)
                 </label>
@@ -180,7 +193,8 @@ export function CreateCollection({
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={creating || uploading || isSubmitting}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   placeholder="My Awesome Collection"
                 />
               </div>
@@ -195,7 +209,8 @@ export function CreateCollection({
                   value={formData.symbol}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={creating || uploading || isSubmitting}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   placeholder="MAC"
                 />
               </div>
@@ -211,7 +226,8 @@ export function CreateCollection({
                 onChange={handleInputChange}
                 required
                 rows={3}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={creating || uploading || isSubmitting}
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="A unique collection of..."
               />
             </div>
@@ -229,7 +245,8 @@ export function CreateCollection({
                 accept="image/*"
                 onChange={handleImageChange}
                 required
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={creating || uploading || isSubmitting}
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               />
               {imagePreview && (
                 <div className="mt-4">
@@ -252,16 +269,25 @@ export function CreateCollection({
                     Try switching to IPFS for more reliable uploads
                   </Text>
                 )}
+                {(createError?.includes("already been processed") ||
+                  createError?.includes("already in progress")) && (
+                  <Text variant="extraSmall" color="muted" className="mt-2">
+                    Please check your wallet and refresh the page if the
+                    collection was created successfully
+                  </Text>
+                )}
               </div>
             )}
 
             <Button
               type="submit"
-              disabled={creating || uploading}
+              disabled={creating || uploading || isSubmitting}
               className="w-full"
             >
-              {creating || uploading
-                ? `Creating Collection... (${uploadMethod.toUpperCase()})`
+              {uploading
+                ? `Uploading Image... (${uploadMethod.toUpperCase()})`
+                : creating || isSubmitting
+                ? "Creating Collection..."
                 : "Create Collection"}
             </Button>
           </form>
