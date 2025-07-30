@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SolanaProvider } from '@/providers/SolanaProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from "@/components/providers/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solana Next",
-  description: "Basic Solana App for Learning",
+  title: "SolanaVault - Web3 Wallet Suite",
+  description: "Securely manage your Solana assets with our next-generation wallet interface.",
 };
 
 export default function RootLayout({
@@ -25,15 +26,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SolanaProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </SolanaProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SolanaProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </SolanaProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

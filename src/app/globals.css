@@ -25,6 +25,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -51,7 +52,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.574 0.213 264.376); /* Purple-600 */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -60,9 +61,10 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.574 0.213 264.376); /* Purple-600 */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -76,6 +78,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Custom gradient colors for modern UI */
+  --gradient-purple-blue: linear-gradient(135deg, oklch(0.574 0.213 264.376) 0%, oklch(0.646 0.17 230.376) 100%);
+  --gradient-purple-pink: linear-gradient(135deg, oklch(0.574 0.213 264.376) 0%, oklch(0.627 0.265 303.9) 100%);
+  --gradient-blue-cyan: linear-gradient(135deg, oklch(0.646 0.17 230.376) 0%, oklch(0.6 0.118 184.704) 100%);
 }
 
 .dark {
@@ -85,7 +92,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: oklch(0.647 0.213 264.376); /* Purple-400 */
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -94,9 +101,10 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.647 0.213 264.376); /* Purple-400 */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -110,13 +118,160 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  
+  /* Dark mode gradient colors */
+  --gradient-purple-blue: linear-gradient(135deg, oklch(0.647 0.213 264.376) 0%, oklch(0.746 0.17 230.376) 100%);
+  --gradient-purple-pink: linear-gradient(135deg, oklch(0.647 0.213 264.376) 0%, oklch(0.727 0.265 303.9) 100%);
+  --gradient-blue-cyan: linear-gradient(135deg, oklch(0.746 0.17 230.376) 0%, oklch(0.796 0.118 184.704) 100%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Smooth transitions for theme changes */
+  * {
+    transition: 
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out,
+      border-color 150ms ease-in-out,
+      box-shadow 150ms ease-in-out;
+  }
+  
+  /* Disable transitions during theme change to prevent flash */
+  .theme-transition-disable * {
+    transition: none !important;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Custom focus styles */
+  .focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  
+  /* Glass effect utility */
+  .glass {
+    backdrop-filter: blur(16px) saturate(180%);
+    background-color: oklch(var(--background) / 0.8);
+    border: 1px solid oklch(var(--border) / 0.5);
+  }
+  
+  /* Gradient text utility */
+  .gradient-text {
+    background: var(--gradient-purple-blue);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Custom animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px oklch(var(--primary) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px oklch(var(--primary) / 0.6);
+    }
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(var(--primary) / 0.1),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+}
+
+@layer utilities {
+  /* Custom utility classes for the new design */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  
+  /* Backdrop blur utilities */
+  .backdrop-blur-glass {
+    backdrop-filter: blur(16px) saturate(180%);
+  }
+  
+  /* Custom shadow utilities */
+  .shadow-glow {
+    box-shadow: 0 0 20px oklch(var(--primary) / 0.3);
+  }
+  
+  .shadow-glow-lg {
+    box-shadow: 0 0 40px oklch(var(--primary) / 0.4);
+  }
+  
+  /* Border gradient utilities */
+  .border-gradient {
+    border: 1px solid;
+    border-image: var(--gradient-purple-blue) 1;
+  }
+  
+  /* Custom spacing for the new design */
+  .section-spacing {
+    @apply py-20 lg:py-32;
+  }
+  
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
   }
 }
