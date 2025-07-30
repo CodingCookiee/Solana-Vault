@@ -1,6 +1,6 @@
 import { WalletConnection } from "@/components/ui/client/WalletConnect/WalletConnection";
 import { TransactionPanel } from "@/components/ui/client/TransactionPanel/TransactionPanel";
-import { ContractInteractions } from "@/components/ui/client/ContractInteractions/ContractInteractions";
+// import { SolanaInteractions } from "@/components/ui/client/SolanaInteractions/SolanaInteractions";
 import { AirDrop } from "@/components/ui/client/AirDrop";
 import { AuthModal } from "@/components/ui/client/Auth/AuthModal";
 import { AuthFlowInfo } from "@/components/ui/client/Auth/AuthFlowInfo";
@@ -86,12 +86,7 @@ export default function Home() {
           <section>
             <AirDrop />
           </section>
-
-          {/* Contract Interactions */}
-          <section>
-            <ContractInteractions />
-          </section>
-
+    
           {/* NFTs */}
           <section>
             <RouterContainer />

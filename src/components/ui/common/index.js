@@ -9,3 +9,4 @@ export {
   CardContent,
 } from "./card";
 export { Text } from "./text";
+export { Toaster } from "./sonner";
