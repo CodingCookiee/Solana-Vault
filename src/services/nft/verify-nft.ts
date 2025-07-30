@@ -2,7 +2,6 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Metaplex, walletAdapterIdentity } from "@metaplex-foundation/js";
 import { VerifyParams, NFTDetails } from "./nft.types";
-import { updateNFTVerificationStatus } from "./storage";
 
 // Add a Set to track pending verification transactions
 const pendingVerificationTransactions = new Set<string>();
@@ -136,7 +135,6 @@ export async function verifyNFTInCollection(
 
     if (success) {
       // Update local storage verification status
-      updateNFTVerificationStatus(params.nftMint.toString(), true);
       console.log("NFT verification completed and storage updated");
     }
 
