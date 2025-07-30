@@ -14,6 +14,7 @@ import { CreateNFT } from "./CreateNFT";
 import { VerifyNFT } from "./VerifyNFT";
 import { MyNFTs } from "./MyNFTs";
 import { CollectionDetails, NFTDetails } from "@/services/nft/nft.types";
+import { useWalletNFTs } from "@/services/nft/nft.hooks";
 
 type ActiveTab = "collection" | "nft" | "verify" | "my-nfts";
 
@@ -23,6 +24,9 @@ export function NFTContainer() {
     useState<CollectionDetails | null>(null);
   const [createdNFT, setCreatedNFT] = useState<NFTDetails | null>(null);
 
+  // Get wallet NFTs for recent activity display
+  const { refresh: refreshWalletNFTs } = useWalletNFTs();
+
   const tabs = [
     { id: "my-nfts" as ActiveTab, label: "My NFTs", icon: "💎" },
     { id: "collection" as ActiveTab, label: "Create Collection", icon: "📁" },
@@ -30,16 +34,24 @@ export function NFTContainer() {
     { id: "verify" as ActiveTab, label: "Verify NFT", icon: "✅" },
   ];
 
-  const handleCollectionCreated = (collection: CollectionDetails) => {
+  const handleCollectionCreated = async (collection: CollectionDetails) => {
     setCreatedCollection(collection);
     setActiveTab("nft");
+    // Refresh wallet data to show the new collection
+    setTimeout(() => {
+      refreshWalletNFTs();
+    }, 2000); // Give some time for the transaction to confirm
   };
 
-  const handleNFTCreated = (nft: NFTDetails) => {
+  const handleNFTCreated = async (nft: NFTDetails) => {
     setCreatedNFT(nft);
     if (nft.collection) {
       setActiveTab("verify");
     }
+    // Refresh wallet data to show the new NFT
+    setTimeout(() => {
+      refreshWalletNFTs();
+    }, 2000); // Give some time for the transaction to confirm
   };
 
   return (
@@ -53,12 +65,12 @@ export function NFTContainer() {
           </CardTitle>
           <Text color="secondary" variant="small">
             Create collections, mint NFTs, verify collection membership, and
-            track your creations
+            track your creations directly from your wallet
           </Text>
         </CardHeader>
       </Card>
 
-      {/* Display summary of created items */}
+      {/* Display summary of recent activity */}
       {(createdCollection || createdNFT) && (
         <Card>
           <CardHeader>
@@ -72,6 +84,10 @@ export function NFTContainer() {
                 </Text>
                 <Text variant="extraSmall" color="muted" className="font-mono">
                   {createdCollection.mint.toString()}
+                </Text>
+                <Text variant="extraSmall" color="muted">
+                  Collection created successfully! It will appear in "My NFTs"
+                  shortly.
                 </Text>
               </div>
             )}
@@ -89,6 +105,9 @@ export function NFTContainer() {
                     {createdNFT.collection.toString().slice(0, 8)}...
                   </Text>
                 )}
+                <Text variant="extraSmall" color="muted">
+                  NFT created successfully! It will appear in "My NFTs" shortly.
+                </Text>
               </div>
             )}
           </CardContent>
@@ -139,11 +158,14 @@ export function NFTContainer() {
       {/* Setup Guide */}
       <Card>
         <CardHeader>
-          <CardTitle variant="small">Setup Guide</CardTitle>
+          <CardTitle variant="small">How It Works</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-          
+            <Text variant="small" color="muted" className="mb-4">
+              All your NFTs and collections are fetched directly from your
+              wallet. No data is stored locally.
+            </Text>
 
             <div className="space-y-3">
               <div className="flex items-start gap-3">

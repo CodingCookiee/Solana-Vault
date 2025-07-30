@@ -1,19 +1,17 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { createCollection, uploadImage } from "./create-collection";
 import { createNFT } from "./create-nft";
-import { verifyNFTInCollection, getNFTDetails } from "./verify-nft";
+import { verifyNFTInCollection } from "./verify-nft";
 import { uploadToIPFS } from "./ipfs-upload";
 import {
-  saveCollection,
-  saveNFT,
-  getStoredCollections,
-  getStoredNFTs,
-  StoredCollection,
-  updateStoredNFT,
-  StoredNFT,
-} from "./storage";
+  fetchWalletNFTs,
+  fetchWalletCollections,
+  fetchWalletRegularNFTs,
+  getWalletNFTDetails,
+  WalletNFT,
+} from "./wallet-nfts";
 import {
   CreateCollectionParams,
   CreateNFTParams,
@@ -31,7 +29,6 @@ export function useCreateCollection() {
   const create = async (
     params: CreateCollectionParams
   ): Promise<CollectionDetails | null> => {
-    // Prevent multiple simultaneous calls
     if (loading) {
       console.warn("Collection creation already in progress");
       return null;
@@ -41,9 +38,6 @@ export function useCreateCollection() {
       setLoading(true);
       setError(null);
       const result = await createCollection(connection, wallet, params);
-      if (result) {
-        saveCollection(result, params.uri);
-      }
       return result;
     } catch (err) {
       const errorMessage =
@@ -67,7 +61,6 @@ export function useCreateNFT() {
   const create = async (
     params: CreateNFTParams
   ): Promise<NFTDetails | null> => {
-    // Prevent multiple simultaneous calls
     if (loading) {
       console.warn("NFT creation already in progress");
       return null;
@@ -77,9 +70,6 @@ export function useCreateNFT() {
       setLoading(true);
       setError(null);
       const result = await createNFT(connection, wallet, params);
-      if (result) {
-        saveNFT(result, params.uri);
-      }
       return result;
     } catch (err) {
       const errorMessage =
@@ -101,7 +91,6 @@ export function useVerifyNFT() {
   const [error, setError] = useState<string | null>(null);
 
   const verify = async (params: VerifyParams): Promise<boolean> => {
-    // Prevent multiple simultaneous calls
     if (loading) {
       console.warn("NFT verification already in progress");
       return false;
@@ -140,12 +129,10 @@ export function useImageUpload() {
         throw new Error("No file selected");
       }
 
-      // Check file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         throw new Error("File size exceeds 10MB limit");
       }
 
-      // Check file type
       if (!file.type.startsWith("image/")) {
         throw new Error("Only image files are allowed");
       }
@@ -171,7 +158,6 @@ export function useImageUpload() {
         err instanceof Error ? err.message : "Failed to upload image";
       setError(errorMessage);
 
-      // Try alternative upload method on failure
       if (
         uploadMethod === "arweave" &&
         err instanceof Error &&
@@ -204,14 +190,27 @@ export function useNFTDetails() {
       setLoading(true);
       setError(null);
       const publicKey = new PublicKey(mintAddress);
-      const details = await getNFTDetails(connection, wallet, publicKey);
+      const walletNFT = await getWalletNFTDetails(
+        connection,
+        wallet,
+        publicKey
+      );
 
-      // Update local storage with the latest details if the NFT exists there
-      if (details) {
-        updateStoredNFT(mintAddress, details);
-      }
+      if (!walletNFT) return null;
 
-      return details;
+      // Convert WalletNFT to NFTDetails
+      const nftDetails: NFTDetails = {
+        mint: walletNFT.mint,
+        name: walletNFT.name,
+        symbol: walletNFT.symbol,
+        description: walletNFT.description,
+        uri: walletNFT.uri,
+        collection: walletNFT.collection,
+        creator: walletNFT.creator,
+        verified: walletNFT.verified,
+      };
+
+      return nftDetails;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch NFT details";
@@ -225,30 +224,103 @@ export function useNFTDetails() {
   return { fetchDetails, loading, error };
 }
 
-export function useStoredItems() {
-  const [collections, setCollections] = useState<StoredCollection[]>([]);
-  const [nfts, setNfts] = useState<StoredNFT[]>([]);
+// Main hook for wallet NFTs - replaces storage-based approach
+export function useWalletNFTs() {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [collections, setCollections] = useState<WalletNFT[]>([]);
+  const [nfts, setNfts] = useState<WalletNFT[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadStoredItems = () => {
+  const fetchNFTs = useCallback(async () => {
+    if (!wallet.connected || !wallet.publicKey) {
+      setCollections([]);
+      setNfts([]);
+      return;
+    }
+
     try {
       setLoading(true);
-      const storedCollections = getStoredCollections();
-      const storedNFTs = getStoredNFTs();
-      setCollections(storedCollections);
-      setNfts(storedNFTs);
-    } catch (error) {
-      console.error("Error loading stored items:", error);
+      setError(null);
+
+      console.log("Fetching NFTs from wallet...");
+      const walletCollections = await fetchWalletCollections(
+        connection,
+        wallet
+      );
+      const walletNFTs = await fetchWalletRegularNFTs(connection, wallet);
+
+      setCollections(walletCollections);
+      setNfts(walletNFTs);
+
+      console.log(
+        `Loaded ${walletCollections.length} collections and ${walletNFTs.length} NFTs`
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch wallet NFTs";
+      setError(errorMessage);
+      setCollections([]);
+      setNfts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [connection, wallet]);
+
+  // Auto-fetch when wallet connects
+  useEffect(() => {
+    if (wallet.connected) {
+      fetchNFTs();
+    } else {
+      setCollections([]);
+      setNfts([]);
+      setError(null);
+    }
+  }, [wallet.connected, fetchNFTs]);
 
   return {
     collections,
     nfts,
     loading,
-    loadStoredItems,
-    refreshItems: loadStoredItems,
+    error,
+    fetchNFTs,
+    refresh: fetchNFTs,
+  };
+}
+
+// Legacy hook for backward compatibility - now just wraps useWalletNFTs
+export function useStoredItems() {
+  const walletData = useWalletNFTs();
+
+  return {
+    collections: walletData.collections.map((nft) => ({
+      ...nft,
+      createdAt: nft.createdAt.toISOString(),
+      imageUrl: nft.image,
+      mint: nft.mint,
+      name: nft.name,
+      symbol: nft.symbol,
+      description: nft.description,
+      uri: nft.uri,
+      creator: nft.creator,
+      verified: nft.verified,
+    })),
+    nfts: walletData.nfts.map((nft) => ({
+      ...nft,
+      createdAt: nft.createdAt.toISOString(),
+      imageUrl: nft.image,
+      mint: nft.mint,
+      name: nft.name,
+      symbol: nft.symbol,
+      description: nft.description,
+      uri: nft.uri,
+      collection: nft.collection,
+      creator: nft.creator,
+      verified: nft.verified,
+    })),
+    loading: walletData.loading,
+    loadStoredItems: walletData.fetchNFTs,
+    refreshItems: walletData.refresh,
   };
 }

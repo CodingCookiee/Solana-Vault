@@ -9,49 +9,54 @@ import {
 } from "@/components/ui/common/card";
 import { Text } from "@/components/ui/common/text";
 import { Button } from "@/components/ui/common/button";
-import { useStoredItems } from "@/services/nft/nft.hooks";
-import { deleteCollection, deleteNFT } from "@/services/nft/storage";
+import { useWalletNFTs } from "@/services/nft/nft.hooks";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export function MyNFTs() {
-  const { collections, nfts, loading, loadStoredItems, refreshItems } =
-    useStoredItems();
+  const { connected } = useWallet();
+  const { collections, nfts, loading, error, refresh } = useWalletNFTs();
 
-  useEffect(() => {
-    loadStoredItems();
-  }, []);
-
-  const handleDeleteCollection = (mintAddress: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this collection from your local storage?"
-      )
-    ) {
-      deleteCollection(mintAddress);
-      refreshItems();
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy:", err);
     }
   };
 
-  const handleDeleteNFT = (mintAddress: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this NFT from your local storage?"
-      )
-    ) {
-      deleteNFT(mintAddress);
-      refreshItems();
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
-  };
+  if (!connected) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Text color="muted" align="center">
+            Please connect your wallet to view your NFTs
+          </Text>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
       <Card>
-        <CardContent>
-          <Text align="center">Loading your NFTs...</Text>
+        <CardContent className="text-center py-8">
+          <Text align="center">Loading your NFTs from wallet...</Text>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Text color="error" align="center" className="mb-4">
+            Error loading NFTs: {error}
+          </Text>
+          <Button onClick={refresh} variant="outline">
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );
@@ -59,18 +64,43 @@ export function MyNFTs() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <span>💎</span>
+              My Wallet NFTs & Collections
+            </CardTitle>
+            <Button
+              onClick={refresh}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+            >
+              {loading ? "Loading..." : "Refresh"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Text variant="small" color="muted">
+            Showing all NFTs and collections in your connected wallet. Data is fetched directly from the Solana blockchain.
+          </Text>
+        </CardContent>
+      </Card>
+
       {/* Collections Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span>📁</span>
-            My Collections ({collections.length})
+            Collections ({collections.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {collections.length === 0 ? (
             <Text color="muted" align="center">
-              No collections created yet
+              No collections found in your wallet
             </Text>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,12 +118,12 @@ export function MyNFTs() {
                         {collection.symbol}
                       </Text>
                       <Text variant="extraSmall" color="muted">
-                        {collection.description}
+                        {collection.description || "No description"}
                       </Text>
                     </div>
-                    {collection.imageUrl && (
+                    {collection.image && (
                       <img
-                        src={collection.imageUrl}
+                        src={collection.image}
                         alt={collection.name}
                         className="w-16 h-16 object-cover rounded-lg border ml-3"
                         onError={(e) => {
@@ -125,19 +155,14 @@ export function MyNFTs() {
 
                     <div className="flex items-center justify-between pt-2">
                       <Text variant="extraSmall" color="muted">
-                        Created:{" "}
-                        {new Date(collection.createdAt).toLocaleDateString()}
+                        Type: Collection
                       </Text>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleDeleteCollection(collection.mint.toString())
-                        }
-                        className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <Text variant="extraSmall" color="muted">
+                          In Wallet
+                        </Text>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -152,13 +177,13 @@ export function MyNFTs() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span>🖼️</span>
-            My NFTs ({nfts.length})
+            NFTs ({nfts.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {nfts.length === 0 ? (
             <Text color="muted" align="center">
-              No NFTs created yet
+              No NFTs found in your wallet
             </Text>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -176,12 +201,12 @@ export function MyNFTs() {
                         {nft.symbol}
                       </Text>
                       <Text variant="extraSmall" color="muted">
-                        {nft.description}
+                        {nft.description || "No description"}
                       </Text>
                     </div>
-                    {nft.imageUrl && (
+                    {nft.image && (
                       <img
-                        src={nft.imageUrl}
+                        src={nft.image}
                         alt={nft.name}
                         className="w-16 h-16 object-cover rounded-lg border ml-3"
                         onError={(e) => {
@@ -238,16 +263,14 @@ export function MyNFTs() {
 
                     <div className="flex items-center justify-between pt-2">
                       <Text variant="extraSmall" color="muted">
-                        Created: {new Date(nft.createdAt).toLocaleDateString()}
+                        Type: NFT
                       </Text>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteNFT(nft.mint.toString())}
-                        className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <Text variant="extraSmall" color="muted">
+                          In Wallet
+                        </Text>
+                      </div>
                     </div>
                   </div>
                 </div>
