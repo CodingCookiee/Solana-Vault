@@ -15,8 +15,10 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/common/button";
 import { Text } from "@/components/ui/common/text";
 import { useWallet } from "@solana/wallet-adapter-react";
-
+import {  useRouter } from 'next/navigation';
+ 
 export function Header() {
+  const { router} = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { connected, publicKey, disconnect } = useWallet();
@@ -35,7 +37,7 @@ export function Header() {
       className="sticky top-0 z-50 border-b border-white/10 bg-white/80 backdrop-blur-lg dark:bg-gray-900/80"
     >
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between" onClick={() => router.push('/')}>
           {/* Logo */}
           <motion.div 
             className="flex items-center space-x-3"
@@ -44,7 +46,7 @@ export function Header() {
           >
             <div className="relative">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 p-2 shadow-lg">
-                <Wallet className="h-full w-full text-white" />
+                <Wallet className="h-full w-full text-white"/>
               </div>
               <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 shadow-sm animate-pulse" />
             </div>

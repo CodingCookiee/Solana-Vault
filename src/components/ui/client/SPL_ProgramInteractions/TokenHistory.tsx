@@ -1,9 +1,39 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Text } from "@/components/ui/common";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Button,
+  Text,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
 import type { CreatedToken, TransactionResult } from "@/services/spl-tokens";
+import {
+  History,
+  Coins,
+  Wallet,
+  Crown,
+  ExternalLink,
+  Copy,
+  Zap,
+  Trash2,
+  Download,
+  RefreshCw,
+  Plus,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Archive,
+  FileDown,
+  X,
+  Star,
+  Shield,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface TokenHistoryProps {
   createdTokens: CreatedToken[];
@@ -35,60 +65,100 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
   closeLoading,
   setStatus,
 }) => {
+  const copyToClipboard = (text: string, message: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(message);
+  };
+
+  const formatAddress = (address: string) => {
+    if (address.length < 8) return address;
+    return `${address.slice(0, 8)}...${address.slice(-8)}`;
+  };
+
   return (
-    <div
-      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200 hover:border-blue-300 dark:hover:border-blue-600"
-      style={{ animationDelay: `${index * 50}ms` }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+      <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden hover:shadow-lg transition-all duration-200">
+        <div className="h-1 bg-gradient-to-r from-purple-500 to-blue-500"></div>
+
+        <CardContent className="p-6">
           {/* Token Header */}
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-              {token.symbol?.charAt(0) || "T"}
-            </div>
-            <div>
-              <Text variant="h6" weight="semibold">
-                {token.name || "Unknown Token"}
-              </Text>
-              <div className="flex items-center space-x-2">
-                <Text variant="small" color="muted">
-                  {token.symbol || "N/A"} • {token.decimals} decimals
-                </Text>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  {token.symbol?.charAt(0) || "T"}
+                </div>
                 {activeHistoryTab === "created" &&
                   token.mintAuthority === publicKey && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                      Mint Authority
-                    </span>
+                    <div className="absolute -top-1 -right-1 p-1 bg-yellow-500 rounded-full">
+                      <Crown className="h-3 w-3 text-white" />
+                    </div>
                   )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <Text variant="h5" weight="bold" className="truncate">
+                  {token.name || "Unknown Token"}
+                </Text>
+                <div className="flex items-center space-x-3 mt-1">
+                  <Text variant="small" color="muted">
+                    {token.symbol || "N/A"} • {token.decimals} decimals
+                  </Text>
+                  {activeHistoryTab === "created" &&
+                    token.mintAuthority === publicKey && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-yellow-400 to-amber-500 text-white shadow-sm">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Mint Authority
+                      </span>
+                    )}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Token Stats */}
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+            <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
+              <div className="flex items-center space-x-2 mb-1">
+                <Coins className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <Text
+                  variant="extraSmall"
+                  weight="medium"
+                  className="text-purple-800 dark:text-purple-200"
+                >
+                  Total Supply
+                </Text>
+              </div>
               <Text
-                variant="extraSmall"
-                color="muted"
-                className="uppercase tracking-wide"
+                variant="small"
+                weight="bold"
+                className="text-purple-700 dark:text-purple-300"
               >
-                Total Supply
-              </Text>
-              <Text variant="small" weight="semibold" className="mt-1">
                 {token.totalSupply.toLocaleString()} {token.symbol}
               </Text>
             </div>
+
             {token.userBalance !== undefined && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+              <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200/50 dark:border-green-800/50">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Wallet className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <Text
+                    variant="extraSmall"
+                    weight="medium"
+                    className="text-green-800 dark:text-green-200"
+                  >
+                    Your Balance
+                  </Text>
+                </div>
                 <Text
-                  variant="extraSmall"
-                  color="muted"
-                  className="uppercase tracking-wide"
+                  variant="small"
+                  weight="bold"
+                  className="text-green-700 dark:text-green-300"
                 >
-                  Your Balance
-                </Text>
-                <Text variant="small" weight="semibold" className="mt-1">
                   {token.userBalance.toLocaleString()} {token.symbol}
                 </Text>
               </div>
@@ -96,244 +166,194 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
           </div>
 
           {/* Mint Address */}
-          <div className="mb-3">
+          <div className="mb-4">
             <Text
               variant="extraSmall"
+              weight="medium"
               color="muted"
-              className="uppercase tracking-wide mb-1"
+              className="mb-2 uppercase tracking-wide"
             >
               Mint Address
             </Text>
-            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg border">
-              <Text variant="extraSmall" className="font-mono break-all">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <Text variant="extraSmall" className="font-mono break-all pr-2">
                 {token.mintAddress}
               </Text>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  copyToClipboard(
+                    token.mintAddress,
+                    "Address copied to clipboard!"
+                  )
+                }
+                className="h-6 w-6 p-0 shrink-0"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
             </div>
           </div>
 
           {/* Metadata URI */}
           {token.metadata?.uri && (
-            <div className="mb-3">
+            <div className="mb-4">
               <Text
                 variant="extraSmall"
+                weight="medium"
                 color="muted"
-                className="uppercase tracking-wide mb-1"
+                className="mb-2 uppercase tracking-wide"
               >
                 Metadata URI
               </Text>
-              <a
-                href={token.metadata.uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline text-xs break-all inline-flex items-center space-x-1"
-              >
-                <span>{token.metadata.uri}</span>
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <Text variant="extraSmall" className="break-all pr-2">
+                  {token.metadata.uri}
+                </Text>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(token.metadata.uri, "_blank")}
+                  className="h-6 w-6 p-0 shrink-0"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </a>
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Creation Date */}
           {token.createdAt && (
-            <div className="mb-3">
+            <div className="mb-4">
               <Text
                 variant="extraSmall"
                 color="muted"
-                className="uppercase tracking-wide"
+                className="flex items-center space-x-2"
               >
-                Created: {new Date(token.createdAt).toLocaleDateString()}
+                <History className="h-3 w-3" />
+                <span>
+                  Created on {new Date(token.createdAt).toLocaleDateString()}
+                </span>
               </Text>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Balance Warning */}
-      {token.userBalance && token.userBalance > 0 && (
-        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <svg
-              className="w-4 h-4 text-yellow-600 dark:text-yellow-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-            <Text
-              variant="extraSmall"
-              className="text-yellow-700 dark:text-yellow-300"
-            >
-              <strong>
-                Balance: {token.userBalance.toLocaleString()} {token.symbol}
-              </strong>
-              <br />
-              Transfer or burn tokens before closing account.
-            </Text>
-          </div>
-        </div>
-      )}
+          {/* Balance Warning */}
+          <AnimatePresence>
+            {token.userBalance && token.userBalance > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-4"
+              >
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <div>
+                      <Text
+                        variant="small"
+                        weight="medium"
+                        className="text-amber-800 dark:text-amber-200"
+                      >
+                        Active Balance: {token.userBalance.toLocaleString()}{" "}
+                        {token.symbol}
+                      </Text>
+                      <Text
+                        variant="extraSmall"
+                        className="text-amber-700 dark:text-amber-300 mt-1"
+                      >
+                        Transfer or burn tokens before closing the account
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => onSelect(token.mintAddress)}
-          variant="outline"
-          size="sm"
-          className="flex items-center space-x-1"
-        >
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
-          <span>Use for Operations</span>
-        </Button>
-
-        <Button
-          onClick={() =>
-            window.open(
-              `https://explorer.solana.com/address/${token.mintAddress}?cluster=devnet`,
-              "_blank"
-            )
-          }
-          variant="outline"
-          size="sm"
-          className="flex items-center space-x-1"
-        >
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-            />
-          </svg>
-          <span>Explorer</span>
-        </Button>
-
-        <Button
-          onClick={() => {
-            navigator.clipboard.writeText(token.mintAddress);
-            setStatus("✅ Token address copied to clipboard");
-            setTimeout(() => {
-              setStatus("");
-            }, 3000);
-          }}
-          variant="outline"
-          size="sm"
-          className="flex items-center space-x-1"
-        >
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
-          </svg>
-          <span>Copy</span>
-        </Button>
-
-        {activeHistoryTab === "created" &&
-          token.mintAuthority === publicKey && (
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {
                 onSelect(token.mintAddress);
-                // Scroll to mint section
-                document
-                  .getElementById("mint-section")
-                  ?.scrollIntoView({ behavior: "smooth" });
+                toast.success("Token selected for operations");
               }}
               variant="outline"
               size="sm"
-              className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20 flex items-center space-x-1"
+              className="border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
             >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              <span>Mint More</span>
+              <Zap className="h-3 w-3 mr-1" />
+              Use Token
             </Button>
-          )}
 
-        {/* Delete/Close Token Account Button */}
-        <Button
-          onClick={() =>
-            onClose(token.mintAddress, token.name || "Unknown Token")
-          }
-          variant="outline"
-          size="sm"
-          className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 flex items-center space-x-1"
-          disabled={closeLoading}
-        >
-          {closeLoading ? (
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
-          ) : (
-            <svg
-              className="w-3 h-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <Button
+              onClick={() =>
+                window.open(
+                  `https://explorer.solana.com/address/${token.mintAddress}?cluster=devnet`,
+                  "_blank"
+                )
+              }
+              variant="outline"
+              size="sm"
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          )}
-          <span>
-            {activeHistoryTab === "created" ? "Remove" : "Close Account"}
-          </span>
-        </Button>
-      </div>
-    </div>
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Explorer
+            </Button>
+
+            <Button
+              onClick={() =>
+                copyToClipboard(token.mintAddress, "Token address copied!")
+              }
+              variant="outline"
+              size="sm"
+              className="border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-900/20"
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              Copy
+            </Button>
+
+            {activeHistoryTab === "created" &&
+              token.mintAuthority === publicKey && (
+                <Button
+                  onClick={() => {
+                    onSelect(token.mintAddress);
+                    document
+                      .getElementById("mint-section")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                    toast.info("Scrolled to mint section");
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-green-200 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Mint More
+                </Button>
+              )}
+
+            <Button
+              onClick={() =>
+                onClose(token.mintAddress, token.name || "Unknown Token")
+              }
+              variant="outline"
+              size="sm"
+              className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+              disabled={closeLoading}
+            >
+              {closeLoading ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
+              {activeHistoryTab === "created" ? "Remove" : "Close Account"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
@@ -369,10 +389,9 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
 
       const result = await solana.closeTokenAccount(mintAddress);
       if (result.success) {
-        // Also remove from local storage if it's a created token
         solana.removeCreatedTokenFromStorage(mintAddress);
         setStatus(`✅ Token account closed successfully: ${result.signature}`);
-        // Refresh token history
+        toast.success("Token account closed successfully!");
         setTimeout(() => {
           onRefresh();
         }, 2000);
@@ -383,6 +402,7 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
+      toast.error(`Failed to close account: ${errorMessage}`);
       console.error("Operation failed:", error);
     } finally {
       setCloseLoading(false);
@@ -392,8 +412,10 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
   const handleResult = (result: TransactionResult, successMessage: string) => {
     if (result.success) {
       setStatus(`✅ ${successMessage}: ${result.signature}`);
+      toast.success(successMessage);
     } else {
       setStatus(`❌ Error: ${result.error}`);
+      toast.error(`Error: ${result.error}`);
     }
   };
 
@@ -414,10 +436,7 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
     }.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus("✅ Token data exported successfully");
-    setTimeout(() => {
-      setStatus("");
-    }, 3000);
+    toast.success("Token data exported successfully!");
   };
 
   const handleClearCreatedTokens = () => {
@@ -427,278 +446,310 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
       )
     ) {
       localStorage.removeItem("created-tokens");
-      onRefresh(); // This will update the state in the parent component
-      setStatus("✅ Created tokens list cleared");
-      setTimeout(() => {
-        setStatus("");
-      }, 3000);
+      onRefresh();
+      toast.success("Created tokens list cleared");
     }
   };
 
-  return (
-    <div>
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-        <button
-          onClick={() => setActiveHistoryTab("created")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeHistoryTab === "created"
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-          }`}
-        >
-          Created Tokens ({createdTokens.length})
-        </button>
-        <button
-          onClick={() => setActiveHistoryTab("owned")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeHistoryTab === "owned"
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-          }`}
-        >
-          Owned Tokens ({ownedTokens.length})
-        </button>
-      </div>
+  const copyAllAddresses = () => {
+    const tokens = activeHistoryTab === "created" ? createdTokens : ownedTokens;
+    const addresses = tokens.map((t) => t.mintAddress).join("\n");
+    navigator.clipboard.writeText(addresses);
+    toast.success("All token addresses copied to clipboard!");
+  };
 
-      {/* Tab Info and Refresh Button */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex-1">
-          <Text variant="small" color="muted">
-            {activeHistoryTab === "created"
-              ? "Tokens where you are the mint authority"
-              : "Tokens you currently hold"}
-          </Text>
-          {activeHistoryTab === "created" && (
-            <Text variant="extraSmall" color="muted" className="mt-1">
-              Note: Created tokens are stored locally. Clear browser data will
-              remove this list.
+  const currentTokens =
+    activeHistoryTab === "created" ? createdTokens : ownedTokens;
+  const hasTokens = currentTokens.length > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.4 }}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm">
+                <History className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle>
+                  <Text
+                    variant="h5"
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold"
+                  >
+                    Token History
+                  </Text>
+                </CardTitle>
+                <Text variant="small" color="muted">
+                  View and manage your token collection
+                </Text>
+              </div>
+            </div>
+
+            <Button
+              onClick={onRefresh}
+              disabled={loadingHistory}
+              variant="outline"
+              size="sm"
+              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+            >
+              {loadingHistory ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Tab Navigation */}
+          <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveHistoryTab("created")}
+              className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                activeHistoryTab === "created"
+                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Crown className="h-4 w-4" />
+                <span>Created Tokens ({createdTokens.length})</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveHistoryTab("owned")}
+              className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                activeHistoryTab === "owned"
+                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Wallet className="h-4 w-4" />
+                <span>Owned Tokens ({ownedTokens.length})</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Tab Description */}
+          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <Text variant="small" color="muted">
+              {activeHistoryTab === "created"
+                ? "Tokens where you are the mint authority and can create additional supply"
+                : "Tokens you currently hold in your wallet"}
             </Text>
-          )}
-        </div>
-        <Button
-          onClick={onRefresh}
-          disabled={loadingHistory}
-          variant="outline"
-          size="sm"
-        >
-          {loadingHistory ? (
-            <span className="flex items-center">
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
-              Loading...
-            </span>
-          ) : (
-            "Refresh"
-          )}
-        </Button>
-      </div>
+            {activeHistoryTab === "created" && (
+              <Text
+                variant="extraSmall"
+                color="muted"
+                className="mt-1 flex items-center space-x-1"
+              >
+                <Shield className="h-3 w-3" />
+                <span>
+                  Created tokens are stored locally and may be lost if browser
+                  data is cleared
+                </span>
+              </Text>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Token List */}
-      <div className="space-y-3">
+      <AnimatePresence mode="wait">
         {loadingHistory ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <Text variant="small" color="muted">
-              Loading token history...
-            </Text>
-          </div>
-        ) : (
-          <>
-            {(activeHistoryTab === "created" ? createdTokens : ownedTokens)
-              .length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="mb-4">
-                  {activeHistoryTab === "created" ? (
-                    <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg
-                        className="w-8 h-8 text-purple-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg
-                        className="w-8 h-8 text-blue-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                    </div>
-                  )}
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-center py-12"
+          >
+            <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+              <CardContent className="p-12">
+                <div className="relative mx-auto w-fit mb-4">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 blur"></div>
+                  <div className="relative p-3 bg-indigo-100/50 dark:bg-indigo-900/30 rounded-full">
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
+                  </div>
                 </div>
-                <Text variant="body" color="muted" weight="medium">
+                <Text variant="body" color="muted">
+                  Loading token history...
+                </Text>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : !hasTokens ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+              <CardContent className="p-12 text-center">
+                <div className="relative mx-auto w-fit mb-4">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-gray-400 to-gray-500 opacity-20 blur"></div>
+                  <div className="relative p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
+                    {activeHistoryTab === "created" ? (
+                      <Plus className="h-8 w-8 text-gray-500" />
+                    ) : (
+                      <Wallet className="h-8 w-8 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+
+                <Text
+                  variant="h4"
+                  color="muted"
+                  weight="medium"
+                  className="mb-2"
+                >
                   {activeHistoryTab === "created"
                     ? "No tokens created yet"
                     : "No tokens owned yet"}
                 </Text>
-                <Text variant="small" color="muted" className="mt-2">
+                <Text variant="body" color="muted" className="max-w-md mx-auto">
                   {activeHistoryTab === "created"
-                    ? "Create your first token using the form above!"
-                    : "Create or receive some tokens to see them here!"}
+                    ? "Create your first token using the creation form above to see it listed here"
+                    : "Create or receive some tokens to see them in your collection"}
                 </Text>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {(activeHistoryTab === "created"
-                  ? createdTokens
-                  : ownedTokens
-                ).map((token, index) => (
-                  <TokenHistoryItem
-                    key={token.mintAddress}
-                    token={token}
-                    index={index}
-                    publicKey={solana.publicKey?.toBase58()}
-                    activeHistoryTab={activeHistoryTab}
-                    onSelect={onSelectToken}
-                    onClose={handleCloseTokenAccount}
-                    closeLoading={closeLoading}
-                    setStatus={setStatus}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tokens"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-4"
+          >
+            {currentTokens.map((token, index) => (
+              <TokenHistoryItem
+                key={token.mintAddress}
+                token={token}
+                index={index}
+                publicKey={solana.publicKey?.toBase58()}
+                activeHistoryTab={activeHistoryTab}
+                onSelect={onSelectToken}
+                onClose={handleCloseTokenAccount}
+                closeLoading={closeLoading}
+                setStatus={setStatus}
+              />
+            ))}
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* Token History Stats */}
-      {!loadingHistory &&
-        (createdTokens.length > 0 || ownedTokens.length > 0) && (
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <Text
-                  variant="h6"
-                  weight="bold"
-                  className="text-purple-600 dark:text-purple-400"
-                >
-                  {createdTokens.length}
-                </Text>
-                <Text variant="small" color="muted">
-                  Tokens Created
-                </Text>
-              </div>
-              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <Text
-                  variant="h6"
-                  weight="bold"
-                  className="text-blue-600 dark:text-blue-400"
-                >
-                  {ownedTokens.length}
-                </Text>
-                <Text variant="small" color="muted">
-                  Tokens Owned
-                </Text>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Stats and Quick Actions */}
+      <AnimatePresence>
+        {!loadingHistory &&
+          (createdTokens.length > 0 || ownedTokens.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
+              {/* Stats */}
+              <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-green-500 to-blue-500"></div>
+                <CardContent className="p-4">
+                  <Text variant="small" weight="medium" className="mb-3">
+                    Token Portfolio Summary
+                  </Text>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
+                      <Text
+                        variant="h3"
+                        weight="bold"
+                        className="text-purple-600 dark:text-purple-400"
+                      >
+                        {createdTokens.length}
+                      </Text>
+                      <Text variant="small" color="muted">
+                        Tokens Created
+                      </Text>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+                      <Text
+                        variant="h3"
+                        weight="bold"
+                        className="text-blue-600 dark:text-blue-400"
+                      >
+                        {ownedTokens.length}
+                      </Text>
+                      <Text variant="small" color="muted">
+                        Tokens Owned
+                      </Text>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Quick Actions for Token History */}
-      {!loadingHistory &&
-        (createdTokens.length > 0 || ownedTokens.length > 0) && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Text variant="small" weight="medium" className="mb-3">
-              Quick Actions:
-            </Text>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => {
-                  const tokens =
-                    activeHistoryTab === "created"
-                      ? createdTokens
-                      : ownedTokens;
-                  const addresses = tokens.map((t) => t.mintAddress).join("\n");
-                  navigator.clipboard.writeText(addresses);
-                  setStatus("✅ All token addresses copied to clipboard");
-                  setTimeout(() => {
-                    setStatus("");
-                  }, 3000);
-                }}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>Copy All Addresses</span>
-              </Button>
-
-              {activeHistoryTab === "created" && createdTokens.length > 0 && (
-                <Button
-                  onClick={handleClearCreatedTokens}
-                  variant="outline"
-                  size="sm"
-                  className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/20 flex items-center space-x-1"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {/* Quick Actions */}
+              <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+                <CardContent className="p-4">
+                  <Text
+                    variant="small"
+                    weight="medium"
+                    className="mb-3 flex items-center space-x-2"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"
-                    />
-                  </svg>
-                  <span>Clear List</span>
-                </Button>
-              )}
+                    <Star className="h-4 w-4" />
+                    <span>Quick Actions</span>
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={copyAllAddresses}
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy All Addresses
+                    </Button>
 
-              <Button
-                onClick={handleExportTokens}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Export Data</span>
-              </Button>
-            </div>
-          </div>
-        )}
-    </div>
+                    <Button
+                      onClick={handleExportTokens}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-200 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+                    >
+                      <FileDown className="h-3 w-3 mr-1" />
+                      Export Data
+                    </Button>
+
+                    {activeHistoryTab === "created" &&
+                      createdTokens.length > 0 && (
+                        <Button
+                          onClick={handleClearCreatedTokens}
+                          variant="outline"
+                          size="sm"
+                          className="border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                        >
+                          <Archive className="h-3 w-3 mr-1" />
+                          Clear List
+                        </Button>
+                      )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+      </AnimatePresence>
+    </motion.div>
   );
 };

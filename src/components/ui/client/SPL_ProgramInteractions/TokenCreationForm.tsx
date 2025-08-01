@@ -1,9 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Text } from "@/components/ui/common";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button, Text, Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
 import type { CreateTokenForm, TransactionResult } from "@/services/spl-tokens";
+import {
+  Coins,
+  Plus,
+  Sparkles,
+  Loader2,
+  ArrowRight,
+  Hash,
+  Image,
+  Zap,
+} from "lucide-react";
 
 interface TokenCreationFormProps {
   onTokenCreated: (mintAddress: string) => void;
@@ -97,109 +108,178 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block mb-2">
-            <Text variant="small" weight="medium">
-              Token Name
-            </Text>
-          </label>
-          <input
-            type="text"
-            value={tokenName}
-            onChange={(e) => setTokenName(e.target.value)}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-            placeholder="My Token"
-            disabled={loading}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">
-            <Text variant="small" weight="medium">
-              Symbol
-            </Text>
-          </label>
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-            placeholder="TKN"
-            disabled={loading}
-          />
-        </div>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+        
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 shadow-sm">
+              <Coins className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle>
+                <Text variant="h5" className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold">
+                  Create SPL Token
+                </Text>
+              </CardTitle>
+              <CardDescription>
+                <Text variant="small" color="muted">
+                  Deploy a new SPL token to the Solana blockchain
+                </Text>
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
 
-      <div>
-        <label className="block mb-2">
-          <Text variant="small" weight="medium">
-            Metadata URL
-          </Text>
-        </label>
-        <input
-          type="text"
-          value={metadata}
-          onChange={(e) => setMetadata(e.target.value)}
-          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-          placeholder="https://example.com/metadata.json"
-          disabled={loading}
-        />
-        <Text variant="extraSmall" color="muted" className="mt-1">
-          JSON file with token metadata (name, symbol, image, description)
-        </Text>
-      </div>
+        <CardContent className="space-y-6">
+          {/* Token Basic Info */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Hash className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <label className="block">
+                  <Text variant="small" weight="medium">
+                    Token Name
+                  </Text>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={tokenName}
+                onChange={(e) => setTokenName(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 transition-colors"
+                placeholder="My Token"
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <label className="block">
+                  <Text variant="small" weight="medium">
+                    Symbol
+                  </Text>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 transition-colors"
+                placeholder="TKN"
+                disabled={loading}
+              />
+            </div>
+          </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block mb-2">
-            <Text variant="small" weight="medium">
-              Initial Amount
-            </Text>
-          </label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            min="1"
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-            placeholder="1000"
-            disabled={loading}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">
-            <Text variant="small" weight="medium">
-              Decimals
-            </Text>
-          </label>
-          <input
-            type="number"
-            value={decimals}
-            onChange={(e) => setDecimals(e.target.value)}
-            min="0"
-            max="9"
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 text-lg"
-            placeholder="9"
-            disabled={loading}
-          />
-        </div>
-      </div>
+          {/* Metadata URL */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Image className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <label className="block">
+                <Text variant="small" weight="medium">
+                  Metadata URL
+                </Text>
+              </label>
+            </div>
+            <input
+              type="text"
+              value={metadata}
+              onChange={(e) => setMetadata(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 transition-colors"
+              placeholder="https://example.com/metadata.json"
+              disabled={loading}
+            />
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <Text variant="extraSmall" className="text-purple-800 dark:text-purple-200">
+                💡 JSON file containing token metadata (name, symbol, image, description)
+              </Text>
+            </div>
+          </div>
 
-      <Button
-        onClick={handleCreateToken}
-        disabled={loading || !tokenName || !symbol}
-        className="w-full py-3 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-            Creating Token...
-          </span>
-        ) : (
-          "Create Token"
-        )}
-      </Button>
-    </div>
+          {/* Token Configuration */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Coins className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <label className="block">
+                  <Text variant="small" weight="medium">
+                    Initial Amount
+                  </Text>
+                </label>
+              </div>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 transition-colors"
+                placeholder="1000"
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <label className="block">
+                  <Text variant="small" weight="medium">
+                    Decimals
+                  </Text>
+                </label>
+              </div>
+              <input
+                type="number"
+                value={decimals}
+                onChange={(e) => setDecimals(e.target.value)}
+                min="0"
+                max="9"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 transition-colors"
+                placeholder="9"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          {/* Create Button */}
+          <Button
+            onClick={handleCreateToken}
+            disabled={loading || !tokenName || !symbol}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg group border-0"
+            size="lg"
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Creating Token...</span>
+              </div>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                <span>Create Token</span>
+                <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </Button>
+
+          {/* Transaction Info */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-2 mb-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <Text variant="extraSmall" weight="medium">Transaction Details</Text>
+            </div>
+            <Text variant="extraSmall" color="muted">
+              Network fee: ~0.01 SOL • Creates mint account and metadata • You will be the mint authority
+            </Text>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };

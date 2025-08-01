@@ -11,6 +11,7 @@ import {
   getMint,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { motion, AnimatePresence } from "framer-motion";
 import { AuthGate } from "@/components/ui/client/Auth/AuthGate";
 import {
   Card,
@@ -21,13 +22,25 @@ import {
   Button,
   Text,
 } from "@/components/ui/common";
+import {
+  Download,
+  Coins,
+  Zap,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  ArrowRight,
+  Copy,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
 
-// Devnet token addresses (these actually exist on devnet)
+// Devnet token addresses
 const DEVNET_TOKENS = {
-  // These are common devnet token mints
-  USDC_DEV: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", // USDC devnet
-  USDT_DEV: "EJwZgeZrdC8TXTQbQBoL6bfuAnFUUy1PVCMB4DYPzVaS", // Example devnet token
-  SOL: "So11111111111111111111111111111111111111112", // Wrapped SOL (same on all networks)
+  USDC_DEV: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  USDT_DEV: "EJwZgeZrdC8TXTQbQBoL6bfuAnFUUy1PVCMB4DYPzVaS",
+  SOL: "So11111111111111111111111111111111111111112",
 };
 
 export const AirDrop: FC = () => {
@@ -44,8 +57,9 @@ export const AirDrop: FC = () => {
   const [status, setStatus] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [lastTransaction, setLastTransaction] = useState<string>("");
 
-  // Get token account address for the user
+  // ... (keeping all the existing logic methods unchanged) ...
   const getUserTokenAccount = useCallback(
     (mintPubkey: PublicKey) => {
       if (!publicKey) return null;
@@ -54,7 +68,6 @@ export const AirDrop: FC = () => {
     [publicKey]
   );
 
-  // Get token balance and info
   const getTokenInfo = useCallback(async () => {
     if (!publicKey || !selectedToken) return;
 
@@ -65,269 +78,26 @@ export const AirDrop: FC = () => {
 
       if (!userTokenAccount) return;
 
-      // Get mint info
       const mint = await getMint(connection, mintPubkey);
       setTokenInfo(mint);
 
-      // Check if token account exists
       try {
         const accountInfo = await getAccount(connection, userTokenAccount);
-        const balance =
-          Number(accountInfo.amount) / Math.pow(10, mint.decimals);
+        const balance = Number(accountInfo.amount) / Math.pow(10, mint.decimals);
         setTokenBalance(balance);
         setStatus(`✅ Balance: ${balance.toFixed(6)} tokens`);
       } catch (error) {
         setTokenBalance(0);
-        setStatus(
-          "❌ No token account found - you need to receive tokens first"
-        );
+        setStatus("❌ No token account found - you need to receive tokens first");
       }
     } catch (error) {
       console.error("Error getting token info:", error);
-      setStatus(
-        `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      setStatus(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsLoadingBalance(false);
     }
   }, [connection, publicKey, selectedToken, getUserTokenAccount]);
 
-  // Create token account if it doesn't exist
-  const createTokenAccount = useCallback(async () => {
-    if (!publicKey || !sendTransaction || !selectedToken) return;
-
-    try {
-      setIsLoadingCreate(true);
-      setStatus("Creating token account...");
-
-      const mintPubkey = new PublicKey(selectedToken);
-      const userTokenAccount = getUserTokenAccount(mintPubkey);
-
-      if (!userTokenAccount)
-        throw new Error("Cannot get token account address");
-
-      // Check if account already exists
-      const accountInfo = await connection.getAccountInfo(userTokenAccount);
-      if (accountInfo) {
-        setStatus("✅ Token account already exists");
-        // Still refresh balance after checking
-        setTimeout(() => getTokenInfo(), 1000);
-        return;
-      }
-
-      // Create the token account
-      const transaction = new Transaction().add(
-        createAssociatedTokenAccountInstruction(
-          publicKey, // Payer
-          userTokenAccount, // Associated token account
-          publicKey, // Owner
-          mintPubkey // Mint
-        )
-      );
-
-      const signature = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, "confirmed");
-
-      setStatus(`✅ Token account created: ${userTokenAccount.toBase58()}`);
-
-      // Refresh balance
-      setTimeout(() => getTokenInfo(), 2000);
-    } catch (error) {
-      console.error("Error creating token account:", error);
-      setStatus(
-        `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    } finally {
-      setIsLoadingCreate(false);
-    }
-  }, [
-    connection,
-    publicKey,
-    sendTransaction,
-    selectedToken,
-    getUserTokenAccount,
-    getTokenInfo,
-  ]);
-
-  // Validate if address is a wallet address or token account
-  const validateRecipientAddress = useCallback(
-    async (address: string) => {
-      try {
-        const pubkey = new PublicKey(address);
-        const accountInfo = await connection.getAccountInfo(pubkey);
-
-        if (!accountInfo) {
-          return {
-            isValid: true,
-            isWallet: true,
-            message: "New wallet address (will create token account)",
-          };
-        }
-
-        // Check if it's a token account by looking at the data length and owner
-        if (
-          accountInfo.owner.equals(TOKEN_PROGRAM_ID) &&
-          accountInfo.data.length === 165
-        ) {
-          return {
-            isValid: true,
-            isWallet: false,
-            message: "This is a token account address",
-          };
-        }
-
-        return {
-          isValid: true,
-          isWallet: true,
-          message: "Existing wallet address",
-        };
-      } catch (error) {
-        return {
-          isValid: false,
-          isWallet: false,
-          message: "Invalid address format",
-        };
-      }
-    },
-    [connection]
-  );
-
-  // Transfer tokens
-  const transferTokens = useCallback(async () => {
-    if (
-      !publicKey ||
-      !sendTransaction ||
-      !selectedToken ||
-      !recipientAddress ||
-      !transferAmount
-    )
-      return;
-
-    try {
-      setIsLoadingTransfer(true);
-      setStatus("Validating recipient address...");
-
-      const mintPubkey = new PublicKey(selectedToken);
-
-      // Validate recipient address
-      const validation = await validateRecipientAddress(recipientAddress);
-      if (!validation.isValid) {
-        throw new Error(`Invalid recipient address: ${validation.message}`);
-      }
-
-      const sourceTokenAccount = getUserTokenAccount(mintPubkey);
-      if (!sourceTokenAccount)
-        throw new Error("Cannot get source token account");
-
-      if (!tokenInfo) {
-        throw new Error("Token info not loaded - click 'Check Balance' first");
-      }
-
-      const amount = Math.floor(
-        parseFloat(transferAmount) * Math.pow(10, tokenInfo.decimals)
-      );
-
-      let destinationTokenAccount: PublicKey;
-      let recipientWallet: PublicKey;
-
-      if (validation.isWallet) {
-        // Recipient address is a wallet - derive token account
-        recipientWallet = new PublicKey(recipientAddress);
-        destinationTokenAccount = getAssociatedTokenAddressSync(
-          mintPubkey,
-          recipientWallet
-        );
-        setStatus(`Transferring to wallet address (${validation.message})...`);
-      } else {
-        // Recipient address is already a token account
-        destinationTokenAccount = new PublicKey(recipientAddress);
-
-        // Get the token account info to find the owner
-        const tokenAccountInfo = await getAccount(
-          connection,
-          destinationTokenAccount
-        );
-        recipientWallet = tokenAccountInfo.owner;
-        setStatus("Transferring to token account directly...");
-      }
-
-      const transaction = new Transaction();
-
-      // Check if destination token account exists (only if it's a derived address)
-      if (validation.isWallet) {
-        const destAccountInfo = await connection.getAccountInfo(
-          destinationTokenAccount
-        );
-        if (!destAccountInfo) {
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              publicKey, // Payer
-              destinationTokenAccount, // Associated token account
-              recipientWallet, // Owner
-              mintPubkey // Mint
-            )
-          );
-          setStatus("Creating destination token account and transferring...");
-        }
-      }
-
-      // Add transfer instruction
-      transaction.add(
-        createTransferInstruction(
-          sourceTokenAccount, // Source
-          destinationTokenAccount, // Destination
-          publicKey, // Owner
-          amount // Amount
-        )
-      );
-
-      const signature = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, "confirmed");
-
-      setStatus(`✅ Transferred ${transferAmount} tokens! Tx: ${signature}`);
-
-      // Refresh balance
-      setTimeout(() => getTokenInfo(), 2000);
-
-      // Clear form
-      setRecipientAddress("");
-      setTransferAmount("");
-    } catch (error) {
-      console.error("Error transferring tokens:", error);
-      let errorMessage = "Unknown error";
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-
-        // Provide specific error messages
-        if (errorMessage.includes("TokenOwnerOffCurveError")) {
-          errorMessage =
-            "Invalid address: Please use a wallet address, not a token account address";
-        } else if (errorMessage.includes("insufficient")) {
-          errorMessage = "Insufficient token balance for this transfer";
-        } else if (errorMessage.includes("Invalid address")) {
-          errorMessage = "Please enter a valid Solana wallet address";
-        }
-      }
-
-      setStatus(`❌ Error: ${errorMessage}`);
-    } finally {
-      setIsLoadingTransfer(false);
-    }
-  }, [
-    connection,
-    publicKey,
-    sendTransaction,
-    selectedToken,
-    recipientAddress,
-    transferAmount,
-    getUserTokenAccount,
-    tokenInfo,
-    getTokenInfo,
-    validateRecipientAddress,
-  ]);
-
-  // Get devnet SOL (airdrop)
   const requestAirdrop = useCallback(async () => {
     if (!publicKey) return;
 
@@ -335,86 +105,253 @@ export const AirDrop: FC = () => {
       setIsLoadingAirdrop(true);
       setStatus("Requesting SOL airdrop...");
 
-      const signature = await connection.requestAirdrop(publicKey, 1000000000); // 1 SOL
+      const signature = await connection.requestAirdrop(publicKey, 1000000000);
       await connection.confirmTransaction(signature, "confirmed");
 
       setStatus("✅ Received 1 SOL from airdrop!");
+      setLastTransaction(signature);
+      toast.success("Airdrop successful! 1 SOL received");
     } catch (error) {
       console.error("Error requesting airdrop:", error);
-      setStatus(
-        `❌ Airdrop failed: ${
-          error instanceof Error
-            ? error.message
-            : "Rate limited - try again later"
-        }`
-      );
+      const errorMsg = error instanceof Error ? error.message : "Rate limited - try again later";
+      setStatus(`❌ Airdrop failed: ${errorMsg}`);
+      toast.error("Airdrop failed. Please try again later.");
     } finally {
       setIsLoadingAirdrop(false);
     }
   }, [connection, publicKey]);
 
-  // Auto-load token info when component mounts or token changes
   useEffect(() => {
     if (publicKey && selectedToken) {
       getTokenInfo();
     }
   }, [publicKey, selectedToken, getTokenInfo]);
 
-  // Helper function to check if address is valid
-  const isValidSolanaAddress = (address: string): boolean => {
-    try {
-      new PublicKey(address);
-      return true;
-    } catch {
-      return false;
-    }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard!");
   };
 
   return (
     <AuthGate>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Devnet Utilities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Text variant="h5" color="default">
-                Devnet Utilities
-              </Text>
-            </CardTitle>
-            <CardDescription>
-              <Text variant="small" color="muted">
-                Get devnet SOL for transaction fees
-              </Text>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-yellow-600 dark:text-yellow-400">
-                    ⚠️
-                  </span>
-                  <Text variant="small" weight="semibold" color="warning">
-                    Devnet Only
+      <div className="space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center space-y-3"
+        >
+          <div className="relative mx-auto w-fit">
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 opacity-20 blur"></div>
+            <div className="relative p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-lg">
+              <Download className="h-6 w-6 text-white" />
+            </div>
+          </div>
+          
+          <div>
+            <Text variant="h4" className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent font-bold">
+              Devnet Token Operations
+            </Text>
+            <Text variant="body" color="muted" className="max-w-md mx-auto">
+              Get test SOL and manage devnet tokens for development
+            </Text>
+          </div>
+        </motion.div>
+
+        {/* Warning Banner */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="border border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-400"></div>
+            <CardContent className="p-4">
+              <div className="flex items-start space-x-3">
+                <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-800/50 mt-0.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="space-y-1">
+                  <Text variant="small" weight="semibold" className="text-amber-800 dark:text-amber-200">
+                    Devnet Environment Only
+                  </Text>
+                  <Text variant="extraSmall" className="text-amber-700 dark:text-amber-300">
+                    These operations only work on Solana devnet. Tokens have no real-world value and are for testing purposes only.
+                  </Text>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* SOL Airdrop Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 shadow-sm">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>
+                    <Text variant="h5">SOL Airdrop</Text>
+                  </CardTitle>
+                  <CardDescription>
+                    <Text variant="small" color="muted">
+                      Get 1 SOL for transaction fees on devnet
+                    </Text>
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Coins className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <Text variant="small" weight="medium">Airdrop Amount</Text>
+                  </div>
+                  <Text variant="h4" className="text-blue-600 dark:text-blue-400 font-bold">
+                    1.0 SOL
                   </Text>
                 </div>
                 <Text variant="extraSmall" color="muted">
-                  This airdrop only works on devnet. You need SOL to pay for
-                  transaction fees.
+                  Sufficient for hundreds of transactions on devnet
                 </Text>
               </div>
 
               <Button
                 onClick={requestAirdrop}
                 disabled={isLoadingAirdrop}
-                variant="outline"
-                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-lg group border-0"
+                size="lg"
               >
-                {isLoadingAirdrop ? "Requesting..." : "Get 1 SOL (Airdrop)"}
+                {isLoadingAirdrop ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Requesting Airdrop...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    <span>Request SOL Airdrop</span>
+                    <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* Rate Limit Info */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <Text variant="extraSmall" weight="medium">Rate Limit</Text>
+                </div>
+                <Text variant="extraSmall" color="muted">
+                  Limited to 1 SOL per request. Wait 24 hours between requests if rate limited.
+                </Text>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Status Display */}
+        <AnimatePresence>
+          {status && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className={`overflow-hidden ${
+                status.includes("Error") || status.includes("❌")
+                  ? "border-red-200 dark:border-red-800"
+                  : status.includes("✅") 
+                  ? "border-green-200 dark:border-green-800"
+                  : "border-blue-200 dark:border-blue-800"
+              }`}>
+                <div className={`h-1 ${
+                  status.includes("Error") || status.includes("❌")
+                    ? "bg-gradient-to-r from-red-400 to-pink-400"
+                    : status.includes("✅")
+                    ? "bg-gradient-to-r from-green-400 to-emerald-400"
+                    : "bg-gradient-to-r from-blue-400 to-purple-400"
+                }`}></div>
+                
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className={`p-1.5 rounded-full mt-0.5 ${
+                      status.includes("Error") || status.includes("❌")
+                        ? "bg-red-100 dark:bg-red-900/30"
+                        : status.includes("✅")
+                        ? "bg-green-100 dark:bg-green-900/30"
+                        : "bg-blue-100 dark:bg-blue-900/30"
+                    }`}>
+                      {status.includes("Error") || status.includes("❌") ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      ) : status.includes("✅") ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 space-y-2">
+                      <Text variant="small" weight="medium" className={
+                        status.includes("Error") || status.includes("❌")
+                          ? "text-red-800 dark:text-red-200"
+                          : status.includes("✅")
+                          ? "text-green-800 dark:text-green-200"
+                          : "text-blue-800 dark:text-blue-200"
+                      }>
+                        Transaction Status
+                      </Text>
+                      
+                      <Text variant="extraSmall" color="muted" className="break-all">
+                        {status}
+                      </Text>
+
+                      {/* Transaction Hash Display */}
+                      {lastTransaction && (
+                        <div className="flex items-center space-x-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <Text variant="extraSmall" color="muted">
+                            Transaction:
+                          </Text>
+                          <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                            {lastTransaction.slice(0, 8)}...{lastTransaction.slice(-8)}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(lastTransaction)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`https://explorer.solana.com/tx/${lastTransaction}?cluster=devnet`, '_blank')}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AuthGate>
   );

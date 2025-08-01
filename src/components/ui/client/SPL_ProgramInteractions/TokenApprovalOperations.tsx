@@ -1,9 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button, Text } from "@/components/ui/common";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Button,
+  Text,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
 import type { TransactionResult, TokenAllowance } from "@/services/spl-tokens";
+import {
+  Shield,
+  ShieldCheck,
+  ShieldX,
+  ArrowRightLeft,
+  Loader2,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Users,
+  Key,
+  Send,
+} from "lucide-react";
 
 interface TokenApprovalOperationsProps {
   tokenMint: string;
@@ -77,6 +99,11 @@ export const TokenApprovalOperations: React.FC<
     } catch {
       return false;
     }
+  };
+
+  const formatAddress = (address: string) => {
+    if (address.length < 8) return address;
+    return `${address.slice(0, 8)}...${address.slice(-8)}`;
   };
 
   const handleApproveTokens = async () => {
@@ -189,234 +216,442 @@ export const TokenApprovalOperations: React.FC<
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3 }}
+      className="space-y-6"
+    >
       {/* Current Allowance Display */}
-      {allowance && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <Text variant="small" weight="medium" className="mb-2">
-            Current Token Allowance:
-          </Text>
-          <div className="space-y-1">
-            <Text variant="extraSmall" color="muted">
-              Delegate: {allowance.delegate}
-            </Text>
-            <Text variant="extraSmall" color="muted">
-              Approved Amount:{" "}
-              <span className="font-semibold">
-                {allowance.amount.toLocaleString()}
-              </span>{" "}
-              tokens
-            </Text>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {allowance && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm">
+                    <ShieldCheck className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Text
+                      variant="small"
+                      weight="semibold"
+                      className="text-blue-800 dark:text-blue-200"
+                    >
+                      Active Token Allowance
+                    </Text>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Text variant="extraSmall" color="muted">
+                          Delegate Address:
+                        </Text>
+                        <Text variant="small" className="font-mono break-all">
+                          {formatAddress(allowance.delegate)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text variant="extraSmall" color="muted">
+                          Approved Amount:
+                        </Text>
+                        <Text
+                          variant="small"
+                          weight="semibold"
+                          className="text-blue-600 dark:text-blue-400"
+                        >
+                          {allowance.amount.toLocaleString()} tokens
+                        </Text>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Approve and Revoke Operations */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Approve Tokens */}
-        <div className="space-y-4">
-          <Text variant="h6" weight="semibold">
-            Approve Tokens
-          </Text>
-          <Text variant="small" color="muted">
-            Allow another address to spend your tokens
-          </Text>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
 
-          <div>
-            <label className="block mb-2">
-              <Text variant="small" weight="medium">
-                Delegate Address
-              </Text>
-            </label>
-            <input
-              type="text"
-              value={delegateAddress}
-              onChange={(e) => setDelegateAddress(e.target.value)}
-              placeholder="Enter delegate address"
-              disabled={approveLoading}
-              className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
-                delegateAddress && !isValidSolanaAddress(delegateAddress)
-                  ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                  : delegateAddress && isValidSolanaAddress(delegateAddress)
-                  ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            />
-            {delegateAddress && !isValidSolanaAddress(delegateAddress) && (
-              <Text variant="extraSmall" color="error" className="mt-1">
-                Invalid Solana address format
-              </Text>
-            )}
-          </div>
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 shadow-sm">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>
+                    <Text
+                      variant="h5"
+                      className="text-green-600 dark:text-green-400 font-bold"
+                    >
+                      Approve Tokens
+                    </Text>
+                  </CardTitle>
+                  <CardDescription>
+                    <Text variant="small" color="muted">
+                      Allow another address to spend your tokens
+                    </Text>
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
 
-          <div>
-            <label className="block mb-2">
-              <Text variant="small" weight="medium">
-                Amount to Approve
-              </Text>
-            </label>
-            <input
-              type="number"
-              value={approveAmount}
-              onChange={(e) => setApproveAmount(e.target.value)}
-              min="0"
-              step="0.1"
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-              placeholder="100"
-              disabled={approveLoading}
-            />
-          </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Key className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <Text variant="small" weight="medium">
+                    Delegate Address
+                  </Text>
+                </div>
+                <input
+                  type="text"
+                  value={delegateAddress}
+                  onChange={(e) => setDelegateAddress(e.target.value)}
+                  placeholder="Enter delegate address..."
+                  disabled={approveLoading}
+                  className={`w-full p-3 border rounded-lg text-sm transition-all duration-200 ${
+                    delegateAddress && !isValidSolanaAddress(delegateAddress)
+                      ? "border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 dark:border-red-700"
+                      : delegateAddress && isValidSolanaAddress(delegateAddress)
+                      ? "border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 dark:border-green-700"
+                      : "border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500"
+                  } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
+                />
 
-          <Button
-            onClick={handleApproveTokens}
-            disabled={
-              approveLoading ||
-              !tokenMint ||
-              !delegateAddress ||
-              !isValidSolanaAddress(delegateAddress)
-            }
-            className="w-full"
-          >
-            {approveLoading ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Approving...
-              </span>
-            ) : (
-              "Approve Tokens"
-            )}
-          </Button>
-        </div>
+                <AnimatePresence>
+                  {delegateAddress && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {isValidSolanaAddress(delegateAddress) ? (
+                        <div className="flex items-center space-x-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                          <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          <Text
+                            variant="extraSmall"
+                            className="text-green-800 dark:text-green-200"
+                          >
+                            Valid delegate address
+                          </Text>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                          <AlertTriangle className="h-3 w-3 text-red-600 dark:text-red-400" />
+                          <Text
+                            variant="extraSmall"
+                            className="text-red-800 dark:text-red-200"
+                          >
+                            Invalid Solana address format
+                          </Text>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <Text variant="small" weight="medium">
+                    Amount to Approve
+                  </Text>
+                </div>
+                <input
+                  type="number"
+                  value={approveAmount}
+                  onChange={(e) => setApproveAmount(e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-800 transition-colors"
+                  placeholder="100"
+                  disabled={approveLoading}
+                />
+              </div>
+
+              <Button
+                onClick={handleApproveTokens}
+                disabled={
+                  approveLoading ||
+                  !tokenMint ||
+                  !delegateAddress ||
+                  !isValidSolanaAddress(delegateAddress) ||
+                  !approveAmount ||
+                  parseFloat(approveAmount) <= 0
+                }
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg group border-0"
+              >
+                {approveLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Approving...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    <span>Approve Tokens</span>
+                    <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Revoke Approval */}
-        <div className="space-y-4">
-          <Text variant="h6" weight="semibold">
-            Revoke Approval
-          </Text>
-          <Text variant="small" color="muted">
-            Remove all token spending permissions
-          </Text>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-red-500 to-pink-500"></div>
 
-          <div className="py-8 text-center">
-            <Text variant="small" color="muted" className="mb-4">
-              This will revoke all current token approvals for this token.
-            </Text>
-            <Button
-              onClick={handleRevokeApproval}
-              disabled={revokeLoading || !tokenMint || !allowance}
-              variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-            >
-              {revokeLoading ? (
-                <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Revoking...
-                </span>
-              ) : (
-                "Revoke Approval"
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 shadow-sm">
+                  <ShieldX className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>
+                    <Text
+                      variant="h5"
+                      className="text-red-600 dark:text-red-400 font-bold"
+                    >
+                      Revoke Approval
+                    </Text>
+                  </CardTitle>
+                  <CardDescription>
+                    <Text variant="small" color="muted">
+                      Remove all token spending permissions
+                    </Text>
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="py-6 text-center space-y-4">
+                <div className="relative mx-auto w-fit">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-red-400 to-pink-400 opacity-20 blur"></div>
+                  <div className="relative p-3 bg-red-100/50 dark:bg-red-900/30 rounded-full">
+                    <ShieldX className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Text
+                    variant="small"
+                    weight="medium"
+                    className="text-red-800 dark:text-red-200"
+                  >
+                    Security Action
+                  </Text>
+                  <Text
+                    variant="extraSmall"
+                    color="muted"
+                    className="max-w-xs mx-auto"
+                  >
+                    This will revoke all current token approvals for this token.
+                    The action cannot be undone.
+                  </Text>
+                </div>
+
+                <Button
+                  onClick={handleRevokeApproval}
+                  disabled={revokeLoading || !tokenMint || !allowance}
+                  className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg group border-0"
+                >
+                  {revokeLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Revoking...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ShieldX className="h-4 w-4 mr-2" />
+                      <span>Revoke Approval</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {!allowance && !allowanceLoading && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+                  <Text variant="extraSmall" color="muted">
+                    No active approvals found for this token
+                  </Text>
+                </div>
               )}
-            </Button>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Transfer From (Delegate Operation) */}
-      <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <Text variant="h6" weight="semibold">
-          Transfer From (Delegate Operation)
-        </Text>
-        <Text variant="small" color="muted">
-          Transfer tokens from an owner who approved you as delegate
-        </Text>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
 
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block mb-2">
-              <Text variant="small" weight="medium">
-                Owner Address
+          <CardHeader className="pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 shadow-sm">
+                <ArrowRightLeft className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle>
+                  <Text
+                    variant="h5"
+                    className="text-blue-600 dark:text-blue-400 font-bold"
+                  >
+                    Transfer From (Delegate)
+                  </Text>
+                </CardTitle>
+                <CardDescription>
+                  <Text variant="small" color="muted">
+                    Transfer tokens from an owner who approved you as delegate
+                  </Text>
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Text variant="small" weight="medium">
+                    Owner Address
+                  </Text>
+                </div>
+                <input
+                  type="text"
+                  value={ownerAddress}
+                  onChange={(e) => setOwnerAddress(e.target.value)}
+                  placeholder="Token owner address..."
+                  disabled={transferFromLoading}
+                  className={`w-full p-3 border rounded-lg text-sm transition-all duration-200 ${
+                    ownerAddress && !isValidSolanaAddress(ownerAddress)
+                      ? "border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 dark:border-red-700"
+                      : ownerAddress && isValidSolanaAddress(ownerAddress)
+                      ? "border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 dark:border-green-700"
+                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+                  } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Send className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Text variant="small" weight="medium">
+                    Recipient Address
+                  </Text>
+                </div>
+                <input
+                  type="text"
+                  value={transferFromRecipient}
+                  onChange={(e) => setTransferFromRecipient(e.target.value)}
+                  placeholder="Recipient address..."
+                  disabled={transferFromLoading}
+                  className={`w-full p-3 border rounded-lg text-sm transition-all duration-200 ${
+                    transferFromRecipient &&
+                    !isValidSolanaAddress(transferFromRecipient)
+                      ? "border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 dark:border-red-700"
+                      : transferFromRecipient &&
+                        isValidSolanaAddress(transferFromRecipient)
+                      ? "border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 dark:border-green-700"
+                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+                  } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <ArrowRightLeft className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Text variant="small" weight="medium">
+                    Amount
+                  </Text>
+                </div>
+                <input
+                  type="number"
+                  value={transferFromAmount}
+                  onChange={(e) => setTransferFromAmount(e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 transition-colors"
+                  placeholder="10"
+                  disabled={transferFromLoading}
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleTransferFrom}
+              disabled={
+                transferFromLoading ||
+                !tokenMint ||
+                !ownerAddress ||
+                !transferFromRecipient ||
+                !isValidSolanaAddress(ownerAddress) ||
+                !isValidSolanaAddress(transferFromRecipient) ||
+                !transferFromAmount ||
+                parseFloat(transferFromAmount) <= 0
+              }
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-lg group border-0"
+              size="lg"
+            >
+              {transferFromLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Transferring from owner...</span>
+                </div>
+              ) : (
+                <>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  <span>Transfer From Owner</span>
+                  <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </Button>
+
+            {/* Info Panel */}
+            <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <Text variant="extraSmall" weight="medium">
+                  Delegate Transfer
+                </Text>
+              </div>
+              <Text variant="extraSmall" color="muted">
+                You must be approved by the owner to transfer their tokens •
+                Amount cannot exceed approved allowance
               </Text>
-            </label>
-            <input
-              type="text"
-              value={ownerAddress}
-              onChange={(e) => setOwnerAddress(e.target.value)}
-              placeholder="Token owner address"
-              disabled={transferFromLoading}
-              className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
-                ownerAddress && !isValidSolanaAddress(ownerAddress)
-                  ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                  : ownerAddress && isValidSolanaAddress(ownerAddress)
-                  ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2">
-              <Text variant="small" weight="medium">
-                Recipient Address
-              </Text>
-            </label>
-            <input
-              type="text"
-              value={transferFromRecipient}
-              onChange={(e) => setTransferFromRecipient(e.target.value)}
-              placeholder="Recipient address"
-              disabled={transferFromLoading}
-              className={`w-full p-3 border rounded-lg dark:bg-gray-800 ${
-                transferFromRecipient &&
-                !isValidSolanaAddress(transferFromRecipient)
-                  ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                  : transferFromRecipient &&
-                    isValidSolanaAddress(transferFromRecipient)
-                  ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2">
-              <Text variant="small" weight="medium">
-                Amount
-              </Text>
-            </label>
-            <input
-              type="number"
-              value={transferFromAmount}
-              onChange={(e) => setTransferFromAmount(e.target.value)}
-              min="0"
-              step="0.1"
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800"
-              placeholder="10"
-              disabled={transferFromLoading}
-            />
-          </div>
-        </div>
-
-        <Button
-          onClick={handleTransferFrom}
-          disabled={
-            transferFromLoading ||
-            !tokenMint ||
-            !ownerAddress ||
-            !transferFromRecipient ||
-            !isValidSolanaAddress(ownerAddress) ||
-            !isValidSolanaAddress(transferFromRecipient)
-          }
-          className="w-full"
-          variant="outline"
-        >
-          {transferFromLoading ? (
-            <span className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-              Transferring from owner...
-            </span>
-          ) : (
-            "Transfer From Owner"
-          )}
-        </Button>
-      </div>
-    </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
