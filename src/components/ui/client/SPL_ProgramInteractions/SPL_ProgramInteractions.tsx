@@ -351,7 +351,7 @@ export const SPLProgramInteractions: React.FC = () => {
         </motion.div>
 
         {/* Operations Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid  gap-8">
           {/* Token Creation */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
