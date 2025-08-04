@@ -10,7 +10,6 @@ import { AuthFlowInfo } from "@/components/ui/client/Auth/AuthFlowInfo";
 import { AuthModal } from "@/components/ui/client/Auth/AuthModal";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { Toaster } from "@/components/ui/common/sonner";
 import { ArrowLeft, Shield, Zap } from "lucide-react";
 import { Text, Button } from "@/components/ui/common";
 import Link from "next/link";
@@ -170,17 +169,7 @@ export default function ConnectWalletPage() {
 
       <Footer />
       <AuthModal />
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: "var(--background)",
-            color: "var(--foreground)",
-            border: "1px solid var(--border)",
-          },
-        }}
-      />
+      
     </div>
   );
 }

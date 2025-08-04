@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/common";
 import { Palette } from "lucide-react";
 import { motion } from "framer-motion";
-import { Toaster } from "@/components/ui/common";
 
 export default function NFTPage() {
   return (

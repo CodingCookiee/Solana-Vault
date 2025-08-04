@@ -7,7 +7,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "./header";
 import { Footer } from "./footer";
-import { Toaster } from "@/components/ui/common/sonner";
 import {
   Loader2,
   AlertTriangle,
@@ -350,17 +349,6 @@ export function DashboardLayout({
       </main>
 
       <Footer />
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: "var(--background)",
-            color: "var(--foreground)",
-            border: "1px solid var(--border)",
-          },
-        }}
-      />
     </div>
   );
 }

@@ -19,7 +19,6 @@ import {
 import { Text, Button } from "@/components/ui/common";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { Toaster } from "@/components/ui/common/sonner";
 import Link from "next/link";
 
 const containerVariants = {
@@ -400,18 +399,6 @@ export default function Home() {
       </main>
 
       <Footer />
-
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: "var(--background)",
-            color: "var(--foreground)",
-            border: "1px solid var(--border)",
-          },
-        }}
-      />
     </div>
   );
 }
