@@ -9,6 +9,15 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
 import type { CreatedToken, TransactionResult } from "@/services/spl-tokens";
@@ -65,6 +74,8 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
   closeLoading,
   setStatus,
 }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const copyToClipboard = (text: string, message: string) => {
     navigator.clipboard.writeText(text);
     toast.success(message);
@@ -73,6 +84,11 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
   const formatAddress = (address: string) => {
     if (address.length < 8) return address;
     return `${address.slice(0, 8)}...${address.slice(-8)}`;
+  };
+
+  const handleCloseConfirm = () => {
+    setIsDialogOpen(false);
+    onClose(token.mintAddress, token.name || "Unknown Token");
   };
 
   return (
@@ -89,7 +105,25 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                {token.imageUrl ? (
+                  <img
+                    src={token.imageUrl}
+                    alt={token.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-purple-200 dark:border-purple-700"
+                    onError={(e) => {
+                      // Fallback to letter avatar if image fails to load
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling?.classList.remove(
+                        "hidden"
+                      );
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                    token.imageUrl ? "hidden" : ""
+                  }`}
+                >
                   {token.symbol?.charAt(0) || "T"}
                 </div>
                 {activeHistoryTab === "created" &&
@@ -119,6 +153,15 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Token Description */}
+          {token.description && (
+            <div className="mb-4">
+              <Text variant="small" color="muted" className="line-clamp-2">
+                {token.description}
+              </Text>
+            </div>
+          )}
 
           {/* Token Stats */}
           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -334,22 +377,157 @@ const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
                 </Button>
               )}
 
-            <Button
-              onClick={() =>
-                onClose(token.mintAddress, token.name || "Unknown Token")
-              }
-              variant="outline"
-              size="sm"
-              className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-              disabled={closeLoading}
-            >
-              {closeLoading ? (
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              ) : (
-                <Trash2 className="h-3 w-3 mr-1" />
-              )}
-              {activeHistoryTab === "created" ? "Remove" : "Close Account"}
-            </Button>
+            <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                  disabled={closeLoading}
+                >
+                  {closeLoading ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3 mr-1" />
+                  )}
+                  {activeHistoryTab === "created" ? "Remove" : "Close Account"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <span>
+                      {activeHistoryTab === "created"
+                        ? "Remove Token from List"
+                        : "Close Token Account"}
+                    </span>
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      {activeHistoryTab === "created"
+                        ? `Are you sure you want to remove "${
+                            token.name || "Unknown Token"
+                          }" from your created tokens list?`
+                        : `Are you sure you want to close the token account for "${
+                            token.name || "Unknown Token"
+                          }"?`}
+                    </p>
+
+                    {activeHistoryTab === "created" ? (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-start space-x-2">
+                          <Coins className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                          <div>
+                            <Text
+                              variant="small"
+                              weight="medium"
+                              className="text-blue-800 dark:text-blue-200"
+                            >
+                              Note: This only removes the token from your local
+                              list
+                            </Text>
+                            <Text
+                              variant="extraSmall"
+                              className="text-blue-700 dark:text-blue-300 mt-1"
+                            >
+                              The actual token on the blockchain will not be
+                              affected. You can re-add it later using the mint
+                              address.
+                            </Text>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                            <div>
+                              <Text
+                                variant="small"
+                                weight="medium"
+                                className="text-amber-800 dark:text-amber-200"
+                              >
+                                Warning: Make sure your balance is 0 first
+                              </Text>
+                              <Text
+                                variant="extraSmall"
+                                className="text-amber-700 dark:text-amber-300 mt-1"
+                              >
+                                You cannot close an account with tokens still in
+                                it. Transfer or burn all tokens first.
+                              </Text>
+                            </div>
+                          </div>
+                        </div>
+
+                        {token.userBalance && token.userBalance > 0 && (
+                          <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <div className="flex items-start space-x-2">
+                              <X className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5" />
+                              <div>
+                                <Text
+                                  variant="small"
+                                  weight="medium"
+                                  className="text-red-800 dark:text-red-200"
+                                >
+                                  Current Balance:{" "}
+                                  {token.userBalance.toLocaleString()}{" "}
+                                  {token.symbol}
+                                </Text>
+                                <Text
+                                  variant="extraSmall"
+                                  className="text-red-700 dark:text-red-300 mt-1"
+                                >
+                                  This operation will fail. Please transfer or
+                                  burn your tokens first.
+                                </Text>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <Text
+                        variant="extraSmall"
+                        color="muted"
+                        className="font-mono"
+                      >
+                        {formatAddress(token.mintAddress)}
+                      </Text>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          copyToClipboard(token.mintAddress, "Address copied!")
+                        }
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCloseConfirm}
+                    className={
+                      activeHistoryTab === "created"
+                        ? "bg-orange-500 hover:bg-orange-600"
+                        : "bg-red-500 hover:bg-red-600"
+                    }
+                  >
+                    {activeHistoryTab === "created"
+                      ? "Remove from List"
+                      : "Close Account"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
@@ -370,39 +548,47 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
     "created"
   );
   const [closeLoading, setCloseLoading] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   const handleCloseTokenAccount = async (
     mintAddress: string,
     tokenName: string
   ) => {
-    if (
-      !confirm(
-        `Are you sure you want to close the token account for ${tokenName}? This will remove the token from your wallet. Make sure you have 0 balance first.`
-      )
-    ) {
-      return;
-    }
-
     try {
       setCloseLoading(true);
       setStatus("⏳ Closing token account...");
 
-      const result = await solana.closeTokenAccount(mintAddress);
-      if (result.success) {
+      if (activeHistoryTab === "created") {
+        // Just remove from local storage for created tokens
         solana.removeCreatedTokenFromStorage(mintAddress);
-        setStatus(`✅ Token account closed successfully: ${result.signature}`);
-        toast.success("Token account closed successfully!");
-        setTimeout(() => {
-          onRefresh();
-        }, 2000);
+        setStatus(`✅ ${tokenName} removed from created tokens list`);
+        toast.success("Token removed from list successfully!");
       } else {
-        handleResult(result, "");
+        // Actually close the token account for owned tokens
+        const result = await solana.closeTokenAccount(mintAddress);
+        if (result.success) {
+          setStatus(
+            `✅ Token account closed successfully: ${result.signature}`
+          );
+          toast.success("Token account closed successfully!");
+        } else {
+          handleResult(result, "");
+          return; // Don't refresh if operation failed
+        }
       }
+
+      setTimeout(() => {
+        onRefresh();
+      }, 1000);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
-      toast.error(`Failed to close account: ${errorMessage}`);
+      toast.error(
+        `Failed to ${
+          activeHistoryTab === "created" ? "remove" : "close"
+        }: ${errorMessage}`
+      );
       console.error("Operation failed:", error);
     } finally {
       setCloseLoading(false);
@@ -440,15 +626,10 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
   };
 
   const handleClearCreatedTokens = () => {
-    if (
-      confirm(
-        "Are you sure you want to clear all created tokens from local storage? This will not affect the actual tokens on the blockchain."
-      )
-    ) {
-      localStorage.removeItem("created-tokens");
-      onRefresh();
-      toast.success("Created tokens list cleared");
-    }
+    localStorage.removeItem("created-tokens");
+    setClearDialogOpen(false);
+    onRefresh();
+    toast.success("Created tokens list cleared");
   };
 
   const copyAllAddresses = () => {
@@ -734,15 +915,44 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
 
                     {activeHistoryTab === "created" &&
                       createdTokens.length > 0 && (
-                        <Button
-                          onClick={handleClearCreatedTokens}
-                          variant="outline"
-                          size="sm"
-                          className="border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                        <AlertDialog
+                          open={clearDialogOpen}
+                          onOpenChange={setClearDialogOpen}
                         >
-                          <Archive className="h-3 w-3 mr-1" />
-                          Clear List
-                        </Button>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                            >
+                              <Archive className="h-3 w-3 mr-1" />
+                              Clear List
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center space-x-2">
+                                <Archive className="h-5 w-5 text-orange-500" />
+                                <span>Clear Created Tokens List</span>
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to clear all created
+                                tokens from your local storage? This will not
+                                affect the actual tokens on the blockchain, but
+                                you'll need to manually track them again.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleClearCreatedTokens}
+                                className="bg-orange-500 hover:bg-orange-600"
+                              >
+                                Clear List
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                   </div>
                 </CardContent>

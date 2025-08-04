@@ -1,6 +1,53 @@
+import { useState, useCallback, useEffect } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as SplService from "./spl.service";
+import { uploadToIPFS, uploadMetadataToIPFS } from "../nft/ipfs-upload"; // Import from NFT service
 import { CreateTokenForm, CreatedToken } from "./spl.types";
+
+// Add image upload hook similar to NFT
+export function useImageUpload() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadMethod] = useState<"ipfs">("ipfs"); // Use IPFS like NFT
+
+  const upload = async (file: File): Promise<string | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!file) {
+        throw new Error("No file selected");
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error("File size exceeds 10MB limit");
+      }
+
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Only image files are allowed");
+      }
+
+      console.log("Uploading token image to IPFS via Pinata...");
+      const uri = await uploadToIPFS(file);
+
+      if (!uri) {
+        throw new Error("Failed to get upload URI. Please try again.");
+      }
+
+      return uri;
+    } catch (err) {
+      console.error("Upload error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to upload image";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { upload, loading, error, uploadMethod };
+}
 
 export const useSplTokens = () => {
   const { connection } = useConnection();
@@ -16,16 +63,18 @@ export const useSplTokens = () => {
       return SplService.getSOLBalance(connection, wallet.publicKey);
     },
 
-    createToken: (form: CreateTokenForm) => {
+    createToken: (form: CreateTokenForm, imageUri?: string) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.createToken(
         connection,
         wallet.publicKey,
         wallet.sendTransaction!,
-        form
+        form,
+        imageUri
       );
     },
 
+    // ... rest of the existing methods remain the same
     mintTokens: (mintAddress: string, amount: number) => {
       if (!isReady) throw new Error("Wallet not ready");
       return SplService.mintTokens(
@@ -64,7 +113,6 @@ export const useSplTokens = () => {
       );
     },
 
-    // New approve and revoke functions
     approveTokens: (
       mintAddress: string,
       delegateAddress: string,
@@ -142,9 +190,7 @@ export const useSplTokens = () => {
       return SplService.getMintInfo(connection, mintAddress);
     },
 
-    // Updated token history functions
     getCreatedTokens: () => {
-      // Use local storage instead of RPC call
       return Promise.resolve(SplService.getCreatedTokensFromStorage());
     },
 
@@ -158,7 +204,6 @@ export const useSplTokens = () => {
       return SplService.getTokenMetadata(connection, mintAddress);
     },
 
-    // Local storage functions
     removeCreatedTokenFromStorage: (mintAddress: string) => {
       SplService.removeCreatedTokenFromStorage(mintAddress);
     },

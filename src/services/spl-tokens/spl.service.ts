@@ -5,7 +5,6 @@ import {
   Transaction,
   Keypair,
   SystemProgram,
-  GetProgramAccountsFilter,
 } from "@solana/web3.js";
 import {
   MINT_SIZE,
@@ -21,12 +20,9 @@ import {
   createRevokeInstruction,
   getAccount,
   getMint,
-  AccountLayout,
-  MintLayout,
 } from "@solana/spl-token";
 import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
-import TransactionResult from "@/services/spl-tokens";
-import { TokenAllowance } from "./spl.types";
+import { uploadMetadataToIPFS } from "../nft/ipfs-upload"; // Import from NFT service
 import {
   CreateTokenForm,
   TokenInfo,
@@ -64,7 +60,7 @@ export const getSOLBalance = async (
   }
 };
 
-// Create a new SPL token with metadata (following the working example)
+// Create a new SPL token with dynamic metadata (following NFT pattern)
 export const createToken = async (
   connection: Connection,
   publicKey: PublicKey | null,
@@ -73,7 +69,8 @@ export const createToken = async (
     connection: Connection,
     options?: any
   ) => Promise<string>,
-  form: CreateTokenForm
+  form: CreateTokenForm,
+  imageUri?: string
 ): Promise<TransactionResult> => {
   try {
     ensureWalletConnected(publicKey);
@@ -97,6 +94,39 @@ export const createToken = async (
       publicKey!
     );
     console.log("Token ATA:", tokenATA.toBase58());
+
+    // Create metadata object similar to NFT approach
+    const metadata = {
+      name: form.tokenName,
+      symbol: form.symbol,
+      description:
+        form.description || `${form.tokenName} - A custom SPL token on Solana`,
+      image: imageUri || "", // Default to empty if no image provided
+      attributes: [
+        {
+          trait_type: "Type",
+          value: "SPL Token",
+        },
+        {
+          trait_type: "Created",
+          value: new Date().toISOString(),
+        },
+        {
+          trait_type: "Decimals",
+          value: form.decimals.toString(),
+        },
+        {
+          trait_type: "Initial Supply",
+          value: form.amount.toString(),
+        },
+      ],
+    };
+
+    console.log("Uploading token metadata to IPFS...", metadata);
+
+    // Upload metadata to IPFS using the same function as NFT
+    const metadataUri = await uploadMetadataToIPFS(metadata);
+    console.log("Token metadata uploaded to IPFS:", metadataUri);
 
     // Create metadata PDA
     const [metadataPDA] = PublicKey.findProgramAddressSync(
@@ -124,7 +154,7 @@ export const createToken = async (
           data: {
             name: form.tokenName,
             symbol: form.symbol,
-            uri: form.metadata,
+            uri: metadataUri, // Use the uploaded metadata URI
             creators: null,
             sellerFeeBasisPoints: 0,
             uses: null,
@@ -183,11 +213,12 @@ export const createToken = async (
 
     console.log("Transaction signature:", signature);
 
-    // Save created token to local storage
+    // Save created token to local storage with the new fields
     const createdToken: CreatedToken = {
       mintAddress: mintKeypair.publicKey.toBase58(),
       name: form.tokenName,
       symbol: form.symbol,
+      description: form.description,
       decimals: form.decimals,
       totalSupply: form.amount,
       mintAuthority: publicKey!.toBase58(),
@@ -196,10 +227,13 @@ export const createToken = async (
       metadata: {
         name: form.tokenName,
         symbol: form.symbol,
-        uri: form.metadata,
+        description: form.description,
+        image: imageUri,
+        uri: metadataUri,
       },
       userBalance: form.amount,
       tokenAccount: tokenATA.toBase58(),
+      imageUrl: imageUri,
     };
 
     saveCreatedTokenToStorage(createdToken);
@@ -218,7 +252,6 @@ export const createToken = async (
   }
 };
 
-// Mint additional tokens
 export const mintTokens = async (
   connection: Connection,
   publicKey: PublicKey | null,
@@ -264,6 +297,42 @@ export const mintTokens = async (
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
+  }
+};
+
+// Get created tokens from local storage
+export const getCreatedTokensFromStorage = (): CreatedToken[] => {
+  try {
+    const stored = localStorage.getItem("created-tokens");
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Error reading created tokens from storage:", error);
+    return [];
+  }
+};
+
+// Save created token to local storage
+export const saveCreatedTokenToStorage = (token: CreatedToken): void => {
+  try {
+    const existing = getCreatedTokensFromStorage();
+    const updated = [
+      ...existing.filter((t) => t.mintAddress !== token.mintAddress),
+      token,
+    ];
+    localStorage.setItem("created-tokens", JSON.stringify(updated));
+  } catch (error) {
+    console.error("Error saving created token to storage:", error);
+  }
+};
+
+// Remove created token from local storage
+export const removeCreatedTokenFromStorage = (mintAddress: string): void => {
+  try {
+    const existing = getCreatedTokensFromStorage();
+    const updated = existing.filter((t) => t.mintAddress !== mintAddress);
+    localStorage.setItem("created-tokens", JSON.stringify(updated));
+  } catch (error) {
+    console.error("Error removing created token from storage:", error);
   }
 };
 
@@ -564,42 +633,6 @@ export const getCreatedTokens = async (
   }
 };
 
-// Alternative approach: Get created tokens from local storage
-export const getCreatedTokensFromStorage = (): CreatedToken[] => {
-  try {
-    const stored = localStorage.getItem("created-tokens");
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error("Error reading created tokens from storage:", error);
-    return [];
-  }
-};
-
-// Save created token to local storage
-export const saveCreatedTokenToStorage = (token: CreatedToken): void => {
-  try {
-    const existing = getCreatedTokensFromStorage();
-    const updated = [
-      ...existing.filter((t) => t.mintAddress !== token.mintAddress),
-      token,
-    ];
-    localStorage.setItem("created-tokens", JSON.stringify(updated));
-  } catch (error) {
-    console.error("Error saving created token to storage:", error);
-  }
-};
-
-// Remove created token from local storage
-export const removeCreatedTokenFromStorage = (mintAddress: string): void => {
-  try {
-    const existing = getCreatedTokensFromStorage();
-    const updated = existing.filter((t) => t.mintAddress !== mintAddress);
-    localStorage.setItem("created-tokens", JSON.stringify(updated));
-  } catch (error) {
-    console.error("Error removing created token from storage:", error);
-  }
-};
-
 // Close token account (this removes the token from your wallet)
 export const closeTokenAccount = async (
   connection: Connection,
@@ -867,7 +900,7 @@ export const getTokenAllowance = async (
 
     // Get account info
     const accountInfo = await getAccount(connection, ownerTokenAccount);
-    
+
     if (!accountInfo.delegate) {
       return null; // No delegation
     }
@@ -878,7 +911,8 @@ export const getTokenAllowance = async (
     return {
       owner: publicKey!.toBase58(),
       delegate: accountInfo.delegate.toBase58(),
-      amount: Number(accountInfo.delegatedAmount) / Math.pow(10, mintInfo.decimals),
+      amount:
+        Number(accountInfo.delegatedAmount) / Math.pow(10, mintInfo.decimals),
       mintAddress,
     };
   } catch (error) {
@@ -904,7 +938,9 @@ export const transferTokensFrom = async (
     ensureWalletConnected(publicKey);
 
     if (!mintAddress || !ownerAddress || !recipientAddress) {
-      throw new Error("Mint address, owner address, and recipient address are required");
+      throw new Error(
+        "Mint address, owner address, and recipient address are required"
+      );
     }
 
     if (amount <= 0) {
@@ -924,13 +960,18 @@ export const transferTokensFrom = async (
     const amountWithDecimals = amount * Math.pow(10, mintInfo.decimals);
 
     // Check if destination token account exists
-    const destinationAccountInfo = await connection.getAccountInfo(destinationATA);
+    const destinationAccountInfo = await connection.getAccountInfo(
+      destinationATA
+    );
 
     const transaction = new Transaction();
 
     // If destination account doesn't exist, create it first
     if (!destinationAccountInfo) {
-      console.log("Creating destination token account:", destinationATA.toBase58());
+      console.log(
+        "Creating destination token account:",
+        destinationATA.toBase58()
+      );
       transaction.add(
         createAssociatedTokenAccountInstruction(
           publicKey!, // Payer (delegate)

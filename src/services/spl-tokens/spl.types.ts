@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 export interface CreateTokenForm {
   tokenName: string;
   symbol: string;
-  metadata: string;
+  description: string; // Add description field
   amount: number;
   decimals: number;
 }
@@ -41,6 +41,7 @@ export interface CreatedToken {
   mintAddress: string;
   name?: string;
   symbol?: string;
+  description?: string; // Add description
   decimals: number;
   totalSupply: number;
   mintAuthority: string | null;
@@ -49,6 +50,7 @@ export interface CreatedToken {
   metadata?: TokenMetadata;
   userBalance?: number;
   tokenAccount?: string;
+  imageUrl?: string; // Add image URL
 }
 
 export interface TokenAllowance {

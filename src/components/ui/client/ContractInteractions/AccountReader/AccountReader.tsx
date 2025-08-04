@@ -421,7 +421,7 @@ export const AccountReader: React.FC<AccountReaderProps> = ({
                       </div>
 
                       {/* Owner Info */}
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      {/* <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center space-x-2 mb-3">
                           <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           <Text
@@ -462,7 +462,7 @@ export const AccountReader: React.FC<AccountReaderProps> = ({
                             </Text>
                           </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       {/* Explorer Link */}
                       {accountData.explorerUrl && (
