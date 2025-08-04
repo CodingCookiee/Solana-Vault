@@ -285,7 +285,7 @@ export const Crud: React.FC = () => {
           >
             CRUD Interface
           </Text>
-          <Text variant="large" color="muted" className="max-w-2xl mx-auto">
+          <Text variant="body" color="muted" className="max-w-2xl mx-auto">
             Create, Read, Update, and Delete entries on the Solana blockchain
           </Text>
         </div>

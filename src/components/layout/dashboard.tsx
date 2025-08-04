@@ -326,7 +326,7 @@ export function DashboardLayout({
                     </div>
                   </div>
                 </div>
-                <Text variant="large" color="muted">
+                <Text variant="body" color="muted">
                   {description}
                 </Text>
               </div>

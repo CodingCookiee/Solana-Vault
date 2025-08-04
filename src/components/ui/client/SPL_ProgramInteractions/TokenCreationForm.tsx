@@ -101,10 +101,11 @@ export const TokenCreationForm: React.FC<TokenCreationFormProps> = ({
       // Upload image if provided
       if (imageFile) {
         setStatus("⏳ Uploading token image...");
-        imageUri = await upload(imageFile);
-        if (!imageUri) {
+        const uploadResult = await upload(imageFile);
+        if (!uploadResult) {
           throw new Error("Failed to upload image");
         }
+        imageUri = uploadResult; // Now we're assigning a non-null string
       }
 
       setStatus("⏳ Creating token and metadata...");

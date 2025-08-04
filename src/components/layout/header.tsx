@@ -7,12 +7,10 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/common/button";
 import { Text } from "@/components/ui/common/text";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
 export function Header() {
-  const { router } = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { connected, publicKey, disconnect } = useWallet();

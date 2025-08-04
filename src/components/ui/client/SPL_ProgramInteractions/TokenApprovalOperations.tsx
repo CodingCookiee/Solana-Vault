@@ -12,7 +12,12 @@ import {
   CardDescription,
 } from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
-import type { TransactionResult, TokenAllowance } from "@/services/spl-tokens";
+import type {
+  TransactionResult,
+  TokenAllowance,
+  TokenInfo,
+  MintInfo,
+} from "@/services/spl-tokens";
 import {
   Shield,
   ShieldCheck,
@@ -31,11 +36,21 @@ interface TokenApprovalOperationsProps {
   tokenMint: string;
   setStatus: (status: string) => void;
   onOperationComplete: () => void;
+  loading?: boolean;
+  tokenInfo?: TokenInfo | null;
+  mintInfo?: MintInfo | null;
 }
 
 export const TokenApprovalOperations: React.FC<
   TokenApprovalOperationsProps
-> = ({ tokenMint, setStatus, onOperationComplete }) => {
+> = ({
+  tokenMint,
+  setStatus,
+  onOperationComplete,
+  loading,
+  tokenInfo,
+  mintInfo,
+}) => {
   const solana = useSplTokens();
 
   // Loading states

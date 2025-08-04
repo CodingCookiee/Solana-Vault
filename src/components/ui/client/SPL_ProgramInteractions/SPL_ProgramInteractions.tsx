@@ -812,6 +812,7 @@ export const SPLProgramInteractions: React.FC = () => {
                     <TokenApprovalOperations
                       tokenMint={tokenMint}
                       tokenInfo={tokenInfo}
+                      mintInfo={mintInfo}
                       setStatus={setStatus}
                       onOperationComplete={refreshData}
                       loading={loadingTokenInfo}

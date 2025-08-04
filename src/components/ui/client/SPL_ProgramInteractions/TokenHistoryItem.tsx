@@ -205,7 +205,7 @@ const TokenDetails: React.FC<{ token: CreatedToken }> = ({ token }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.open(token.metadata.uri, "_blank")}
+              onClick={() => window.open(token.metadata?.uri, "_blank")}
               className="h-6 w-6 p-0 shrink-0"
             >
               <ExternalLink className="h-3 w-3" />

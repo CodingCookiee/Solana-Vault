@@ -562,7 +562,7 @@ export function VerifyNFT() {
                                   size="sm"
                                   onClick={() =>
                                     copyToClipboard(
-                                      nftDetails.collection.toString()
+                                      nftDetails.collection?.toString() || ""
                                     )
                                   }
                                   className="h-6 w-6 p-0"
@@ -574,7 +574,7 @@ export function VerifyNFT() {
                                   size="sm"
                                   onClick={() =>
                                     openInExplorer(
-                                      nftDetails.collection.toString()
+                                      nftDetails.creator.toString()
                                     )
                                   }
                                   className="h-6 w-6 p-0"

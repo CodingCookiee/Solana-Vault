@@ -2,9 +2,21 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button, Text, Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/common";
+import {
+  Button,
+  Text,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/common";
 import { useSplTokens } from "@/services/spl-tokens";
-import type { TransactionResult } from "@/services/spl-tokens";
+import type {
+  TransactionResult,
+  TokenInfo,
+  MintInfo,
+} from "@/services/spl-tokens";
 import {
   Zap,
   Send,
@@ -21,14 +33,20 @@ import { toast } from "sonner";
 
 interface TokenOperationsProps {
   tokenMint: string;
+  tokenInfo: TokenInfo | null;
+  mintInfo: MintInfo | null;
   setStatus: (status: string) => void;
   onOperationComplete: () => void;
+  loading: boolean;
 }
 
 export const TokenOperations: React.FC<TokenOperationsProps> = ({
   tokenMint,
+  tokenInfo,
+  mintInfo,
   setStatus,
   onOperationComplete,
+  loading,
 }) => {
   const solana = useSplTokens();
 
@@ -94,7 +112,8 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
       const result = await solana.mintTokens(tokenMint, amountNum);
       handleResult(result, `Minted ${amountNum} tokens`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
       toast.error(`Failed to mint tokens: ${errorMessage}`);
       console.error("Operation failed:", error);
@@ -125,10 +144,15 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
         throw new Error("Amount must be a positive number");
       }
 
-      const result = await solana.transferTokens(tokenMint, transferRecipient, amountNum);
+      const result = await solana.transferTokens(
+        tokenMint,
+        transferRecipient,
+        amountNum
+      );
       handleResult(result, `Transferred ${amountNum} tokens`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
       toast.error(`Failed to transfer tokens: ${errorMessage}`);
       console.error("Operation failed:", error);
@@ -162,7 +186,8 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
       const result = await solana.burnTokens(tokenMint, amountNum);
       handleResult(result, `Burned ${amountNum} tokens`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       setStatus(`❌ Error: ${errorMessage}`);
       toast.error(`Failed to burn tokens: ${errorMessage}`);
       console.error("Operation failed:", error);
@@ -183,7 +208,7 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
         {/* Mint Additional Tokens */}
         <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
-          
+
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 shadow-sm">
@@ -191,7 +216,10 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
               </div>
               <div>
                 <CardTitle>
-                  <Text variant="h5" className="text-green-600 dark:text-green-400 font-bold">
+                  <Text
+                    variant="h5"
+                    className="text-green-600 dark:text-green-400 font-bold"
+                  >
                     Mint Tokens
                   </Text>
                 </CardTitle>
@@ -208,7 +236,9 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <Text variant="small" weight="medium">Amount to Mint</Text>
+                <Text variant="small" weight="medium">
+                  Amount to Mint
+                </Text>
               </div>
               <input
                 type="number"
@@ -221,10 +251,15 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                 disabled={mintLoading}
               />
             </div>
-            
+
             <Button
               onClick={handleMintTokens}
-              disabled={mintLoading || !tokenMint || !mintAmount || parseFloat(mintAmount) <= 0}
+              disabled={
+                mintLoading ||
+                !tokenMint ||
+                !mintAmount ||
+                parseFloat(mintAmount) <= 0
+              }
               className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg group border-0"
             >
               {mintLoading ? (
@@ -240,11 +275,14 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                 </>
               )}
             </Button>
-            
+
             <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <Text variant="extraSmall" className="text-green-800 dark:text-green-200">
+                <Text
+                  variant="extraSmall"
+                  className="text-green-800 dark:text-green-200"
+                >
                   Requires mint authority to create new tokens
                 </Text>
               </div>
@@ -255,7 +293,7 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
         {/* Burn Tokens */}
         <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-red-500 to-pink-500"></div>
-          
+
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 shadow-sm">
@@ -263,7 +301,10 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
               </div>
               <div>
                 <CardTitle>
-                  <Text variant="h5" className="text-red-600 dark:text-red-400 font-bold">
+                  <Text
+                    variant="h5"
+                    className="text-red-600 dark:text-red-400 font-bold"
+                  >
                     Burn Tokens
                   </Text>
                 </CardTitle>
@@ -280,7 +321,9 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <Text variant="small" weight="medium">Amount to Burn</Text>
+                <Text variant="small" weight="medium">
+                  Amount to Burn
+                </Text>
               </div>
               <input
                 type="number"
@@ -293,10 +336,15 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                 disabled={burnLoading}
               />
             </div>
-            
+
             <Button
               onClick={handleBurnTokens}
-              disabled={burnLoading || !tokenMint || !burnAmount || parseFloat(burnAmount) <= 0}
+              disabled={
+                burnLoading ||
+                !tokenMint ||
+                !burnAmount ||
+                parseFloat(burnAmount) <= 0
+              }
               className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg group border-0"
             >
               {burnLoading ? (
@@ -316,7 +364,10 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
             <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <Text variant="extraSmall" className="text-red-800 dark:text-red-200">
+                <Text
+                  variant="extraSmall"
+                  className="text-red-800 dark:text-red-200"
+                >
                   This action is irreversible and reduces total supply
                 </Text>
               </div>
@@ -328,7 +379,7 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
       {/* Transfer Tokens */}
       <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-        
+
         <CardHeader className="pb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm">
@@ -336,7 +387,10 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
             </div>
             <div>
               <CardTitle>
-                <Text variant="h5" className="text-blue-600 dark:text-blue-400 font-bold">
+                <Text
+                  variant="h5"
+                  className="text-blue-600 dark:text-blue-400 font-bold"
+                >
                   Transfer Tokens
                 </Text>
               </CardTitle>
@@ -354,7 +408,9 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Send className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <Text variant="small" weight="medium">Recipient Address</Text>
+                <Text variant="small" weight="medium">
+                  Recipient Address
+                </Text>
               </div>
               <input
                 type="text"
@@ -365,12 +421,13 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                 className={`w-full p-3 border rounded-lg text-sm transition-all duration-200 ${
                   transferRecipient && !isValidSolanaAddress(transferRecipient)
                     ? "border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 dark:border-red-700"
-                    : transferRecipient && isValidSolanaAddress(transferRecipient)
+                    : transferRecipient &&
+                      isValidSolanaAddress(transferRecipient)
                     ? "border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 dark:border-green-700"
                     : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
                 } focus:ring-2 focus:ring-opacity-50 dark:bg-gray-800`}
               />
-              
+
               <AnimatePresence>
                 {transferRecipient && (
                   <motion.div
@@ -382,14 +439,20 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                     {isValidSolanaAddress(transferRecipient) ? (
                       <div className="flex items-center space-x-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                         <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
-                        <Text variant="extraSmall" className="text-green-800 dark:text-green-200">
+                        <Text
+                          variant="extraSmall"
+                          className="text-green-800 dark:text-green-200"
+                        >
                           Valid recipient address
                         </Text>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
                         <AlertTriangle className="h-3 w-3 text-red-600 dark:text-red-400" />
-                        <Text variant="extraSmall" className="text-red-800 dark:text-red-200">
+                        <Text
+                          variant="extraSmall"
+                          className="text-red-800 dark:text-red-200"
+                        >
                           Invalid Solana address format
                         </Text>
                       </div>
@@ -398,11 +461,13 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
                 )}
               </AnimatePresence>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <Text variant="small" weight="medium">Amount to Transfer</Text>
+                <Text variant="small" weight="medium">
+                  Amount to Transfer
+                </Text>
               </div>
               <input
                 type="number"
@@ -416,7 +481,7 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
               />
             </div>
           </div>
-          
+
           <Button
             onClick={handleTransferTokens}
             disabled={
@@ -448,10 +513,13 @@ export const TokenOperations: React.FC<TokenOperationsProps> = ({
           <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-2 mb-2">
               <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              <Text variant="extraSmall" weight="medium">Transfer Details</Text>
+              <Text variant="extraSmall" weight="medium">
+                Transfer Details
+              </Text>
             </div>
             <Text variant="extraSmall" color="muted">
-              Network fee: ~0.002 SOL • Creates recipient token account if needed • Instant transfer
+              Network fee: ~0.002 SOL • Creates recipient token account if
+              needed • Instant transfer
             </Text>
           </div>
         </CardContent>

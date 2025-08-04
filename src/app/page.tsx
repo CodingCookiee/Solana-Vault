@@ -38,11 +38,10 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
 };
-
 const features = [
   {
     icon: Shield,
@@ -183,7 +182,7 @@ export default function Home() {
 
               <motion.div variants={itemVariants} className="mb-8">
                 <Text
-                  variant="large"
+                  variant="body"
                   color="muted"
                   align="center"
                   className="mx-auto max-w-2xl leading-relaxed"
@@ -269,7 +268,7 @@ export default function Home() {
               <Text variant="h2" weight="bold" className="mb-4">
                 Why Choose SolanaVault?
               </Text>
-              <Text variant="large" color="muted">
+              <Text variant="body" color="muted">
                 Built with cutting-edge technology and designed for the modern
                 crypto user
               </Text>
@@ -322,7 +321,7 @@ export default function Home() {
               <Text variant="h2" weight="bold" className="mb-4">
                 Loved by Developers & Users
               </Text>
-              <Text variant="large" color="muted">
+              <Text variant="body" color="muted">
                 See what the community is saying about SolanaVault
               </Text>
             </motion.div>
@@ -379,7 +378,7 @@ export default function Home() {
               <Text variant="h2" weight="bold" className="mb-6">
                 Ready to Start Your Solana Journey?
               </Text>
-              <Text variant="large" color="muted" className="mb-8">
+              <Text variant="body" color="muted" className="mb-8">
                 Join thousands of users who trust SolanaVault with their digital
                 assets
               </Text>
