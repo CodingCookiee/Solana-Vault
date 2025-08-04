@@ -66,7 +66,7 @@ export const TokenHistory: React.FC<TokenHistoryProps> = ({
         setActiveHistoryTab("owned");
       }
     }
-  }, [selectedTokenMint, createdTokens, ownedTokens, ]);
+  }, [selectedTokenMint, createdTokens, ownedTokens]);
 
   const handleCloseTokenAccount = async (
     mintAddress: string,

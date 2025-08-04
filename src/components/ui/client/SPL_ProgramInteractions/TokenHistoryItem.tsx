@@ -42,7 +42,7 @@ interface TokenHistoryItemProps {
   onSelect: (mintAddress: string) => void;
   onClose: (mintAddress: string, tokenName: string) => void;
   closeLoading: boolean;
-  
+  isSelected: boolean; // New prop to track if the token is selected}
 }
 
 const TokenAvatar: React.FC<{ token: CreatedToken }> = ({ token }) => (
@@ -278,6 +278,7 @@ const TokenActions: React.FC<{
   onSelect: (mintAddress: string) => void;
   onClose: (mintAddress: string, tokenName: string) => void;
   closeLoading: boolean;
+  isSelected: boolean;
 }> = ({
   token,
   activeHistoryTab,
@@ -285,6 +286,7 @@ const TokenActions: React.FC<{
   onSelect,
   onClose,
   closeLoading,
+  isSelected,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -524,6 +526,7 @@ export const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
   onSelect,
   onClose,
   closeLoading,
+  isSelected,
 }) => {
   return (
     <motion.div
@@ -560,6 +563,7 @@ export const TokenHistoryItem: React.FC<TokenHistoryItemProps> = ({
             onSelect={onSelect}
             onClose={onClose}
             closeLoading={closeLoading}
+            isSelected={isSelected}
           />
         </CardContent>
       </Card>

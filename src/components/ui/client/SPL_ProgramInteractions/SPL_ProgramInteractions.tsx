@@ -51,6 +51,7 @@ export const SPLProgramInteractions: React.FC = () => {
   const [tokenMint, setTokenMint] = useState<string>("");
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [mintInfo, setMintInfo] = useState<MintInfo | null>(null);
+  const [loadingTokenInfo, setLoadingTokenInfo] = useState(false);
 
   // Token history state
   const [createdTokens, setCreatedTokens] = useState<CreatedToken[]>([]);
@@ -70,8 +71,24 @@ export const SPLProgramInteractions: React.FC = () => {
     if (tokenMint && solana.isReady) {
       loadTokenInfo();
       loadMintInfo();
+    } else {
+      // Clear token info if no tokenMint is selected
+      setTokenInfo(null);
+      setMintInfo(null);
     }
   }, [tokenMint, solana.isReady]);
+
+  const handleSelectToken = (mintAddress: string) => {
+    // Only update if it's a different token
+    if (mintAddress !== tokenMint) {
+      // Set loading state first
+      setTokenInfo(null);
+      setMintInfo(null);
+      setLoadingTokenInfo(true);
+      setTokenMint(mintAddress);
+      toast.success("Token selected for operations");
+    }
+  };
 
   // Helper functions
   const loadSOLBalance = async () => {
@@ -100,10 +117,14 @@ export const SPLProgramInteractions: React.FC = () => {
     if (!tokenMint || !solana.isReady) return;
 
     try {
+      setLoadingTokenInfo(true);
       const info = await solana.getTokenAccountInfo(tokenMint);
       setTokenInfo(info);
     } catch (error) {
       console.error("Error loading token info:", error);
+      setTokenInfo(null);
+    } finally {
+      setLoadingTokenInfo(false);
     }
   };
 
@@ -111,10 +132,14 @@ export const SPLProgramInteractions: React.FC = () => {
     if (!tokenMint || !solana.isReady) return;
 
     try {
+      setLoadingTokenInfo(true);
       const info = await solana.getMintInfo(tokenMint);
       setMintInfo(info);
     } catch (error) {
       console.error("Error loading mint info:", error);
+      setMintInfo(null);
+    } finally {
+      setLoadingTokenInfo(false);
     }
   };
 
@@ -155,7 +180,9 @@ export const SPLProgramInteractions: React.FC = () => {
     setTokenMint(mintAddress);
     toast.success("Token created and selected!");
     // Refresh data after token creation
-    setTimeout(refreshData, 2000);
+    setTimeout(() => {
+      refreshData();
+    }, 2000);
   };
 
   const copyTokenAddress = () => {
@@ -359,15 +386,16 @@ export const SPLProgramInteractions: React.FC = () => {
           <TokenHistory
             createdTokens={createdTokens}
             ownedTokens={ownedTokens}
-            onSelectToken={setTokenMint}
+            onSelectToken={handleSelectToken}
             onRefresh={loadTokenHistory}
             setStatus={setStatus}
             loadingHistory={loadingHistory}
+            selectedTokenMint={tokenMint}
           />
         </motion.div>
 
         {/* Operations Grid */}
-        <div className="grid  gap-8">
+        <div className="grid gap-8">
           {/* Token Creation */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -486,31 +514,61 @@ export const SPLProgramInteractions: React.FC = () => {
               <div className="h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
 
               <CardHeader className="pb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm">
-                    <Database className="h-5 w-5 text-white" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm">
+                      <Database className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle>
+                        <Text
+                          variant="h4"
+                          className="text-blue-600 dark:text-blue-400 font-bold"
+                        >
+                          Token Information
+                        </Text>
+                      </CardTitle>
+                      <CardDescription>
+                        <Text variant="small" color="muted">
+                          View detailed information about your selected token
+                        </Text>
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle>
-                      <Text
-                        variant="h4"
-                        className="text-blue-600 dark:text-blue-400 font-bold"
-                      >
-                        Token Information
-                      </Text>
-                    </CardTitle>
-                    <CardDescription>
-                      <Text variant="small" color="muted">
-                        View detailed information about your selected token
-                      </Text>
-                    </CardDescription>
-                  </div>
+                  {tokenMint && (
+                    <Button
+                      onClick={() => {
+                        loadTokenInfo();
+                        loadMintInfo();
+                      }}
+                      disabled={loadingTokenInfo}
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                    >
+                      {loadingTokenInfo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
 
               <CardContent>
                 <AnimatePresence mode="wait">
-                  {tokenMint && (tokenInfo || mintInfo) ? (
+                  {loadingTokenInfo ? (
+                    <motion.div
+                      key="loading-token-info"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex justify-center items-center py-16"
+                    >
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    </motion.div>
+                  ) : tokenMint && (tokenInfo || mintInfo) ? (
                     <motion.div
                       key="token-info"
                       initial={{ opacity: 0 }}
@@ -594,8 +652,11 @@ export const SPLProgramInteractions: React.FC = () => {
             <CardContent>
               <TokenOperations
                 tokenMint={tokenMint}
+                tokenInfo={tokenInfo}
+                mintInfo={mintInfo}
                 setStatus={setStatus}
                 onOperationComplete={refreshData}
+                loading={loadingTokenInfo}
               />
             </CardContent>
           </Card>
@@ -636,8 +697,10 @@ export const SPLProgramInteractions: React.FC = () => {
             <CardContent>
               <TokenApprovalOperations
                 tokenMint={tokenMint}
+                tokenInfo={tokenInfo}
                 setStatus={setStatus}
                 onOperationComplete={refreshData}
+                loading={loadingTokenInfo}
               />
             </CardContent>
           </Card>
