@@ -9,6 +9,7 @@ import { Text } from "@/components/ui/common/text";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 export function Header() {
   const { router } = useRouter();
@@ -30,9 +31,9 @@ export function Header() {
       className="sticky top-0 z-50 border-b border-white/10 bg-white/80 backdrop-blur-lg dark:bg-gray-900/80"
     >
       <div className="container mx-auto px-4">
-        <div
-          className="flex h-16 items-center justify-between"
-          onClick={() => router.push("/")}
+        <Link
+          className="flex h-16 items-center justify-between cursor-pointer"
+          href="/"
         >
           {/* Logo */}
           <motion.div
@@ -41,7 +42,7 @@ export function Header() {
             whileTap={{ scale: 0.95 }}
           >
             <div className="relative">
-              <div className="h-10 w-10 rounded-xl p-2 shadow-lg bg-gradient-to-r from-purple-300 to-blue-300  ">
+              <div className="h-10 w-10 rounded-xl p-2 shadow-lg bg-gradient-to-r from-purple-500 to-blue-300  ">
                 {/* <Wallet className="h-full w-full text-white"/>
                  */}
                 <Image
@@ -172,7 +173,7 @@ export function Header() {
               </AnimatePresence>
             </Button>
           </div>
-        </div>
+        </Link>
 
         {/* Mobile Menu */}
         <AnimatePresence>
