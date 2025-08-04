@@ -1,15 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  Github, 
-  Twitter, 
-  Globe, 
+import {
+  Github,
+  Twitter,
+  Globe,
   Heart,
   ExternalLink,
   Shield,
   Zap,
-  Users
+  Users,
 } from "lucide-react";
 import { Text } from "@/components/ui/common/text";
 import { Button } from "@/components/ui/common/button";
@@ -19,7 +19,6 @@ export function Footer() {
     product: [
       { name: "Features", href: "#features" },
       { name: "Security", href: "#security" },
-      { name: "API Docs", href: "#docs" },
       { name: "Pricing", href: "#pricing" },
     ],
     company: [
@@ -37,14 +36,18 @@ export function Footer() {
   };
 
   const socialLinks = [
-    { name: "GitHub", icon: Github, href: "#", color: "hover:text-gray-900" },
-    { name: "Twitter", icon: Twitter, href: "#", color: "hover:text-blue-500" },
+    {
+      name: "GitHub",
+      icon: Github,
+      href: "https://github.com/CodingCookiee",
+      color: "hover:text-gray-900",
+    },
     { name: "Website", icon: Globe, href: "#", color: "hover:text-green-500" },
   ];
 
   const stats = [
     { label: "Active Users", value: "10K+", icon: Users },
-    { label: "Transactions", value: "1M+", icon: Zap },
+    { label: "Transactions", value: "100K+", icon: Zap },
     { label: "Security Score", value: "99%", icon: Shield },
   ];
 
@@ -113,16 +116,17 @@ export function Footer() {
               </div>
             </div>
             <Text variant="body" color="muted" className="mb-6 max-w-sm">
-              The most secure and user-friendly way to manage your Solana assets. 
-              Built for developers, designed for everyone.
+              The most secure and user-friendly way to manage your Solana
+              assets. Built for developers, designed for everyone.
             </Text>
-            
+
             {/* Social Links */}
             <div className="flex space-x-4">
               {socialLinks.map((social, index) => (
                 <motion.a
                   key={social.name}
                   href={social.href}
+                  target="_blank"
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
@@ -140,38 +144,44 @@ export function Footer() {
           {/* Links Sections */}
           <div className="lg:col-span-8">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
-              {Object.entries(links).map(([category, categoryLinks], categoryIndex) => (
-                <motion.div
-                  key={category}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: categoryIndex * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <Text variant="small" weight="medium" className="mb-4 uppercase tracking-wider">
-                    {category}
-                  </Text>
-                  <ul className="space-y-3">
-                    {categoryLinks.map((link, index) => (
-                      <motion.li
-                        key={link.name}
-                        initial={{ opacity: 0, x: -10 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.4, delay: index * 0.1 }}
-                        viewport={{ once: true }}
-                      >
-                        <a
-                          href={link.href}
-                          className="group flex items-center text-gray-600 transition-colors hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+              {Object.entries(links).map(
+                ([category, categoryLinks], categoryIndex) => (
+                  <motion.div
+                    key={category}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: categoryIndex * 0.1 }}
+                    viewport={{ once: true }}
+                  >
+                    <Text
+                      variant="small"
+                      weight="medium"
+                      className="mb-4 uppercase tracking-wider"
+                    >
+                      {category}
+                    </Text>
+                    <ul className="space-y-3">
+                      {categoryLinks.map((link, index) => (
+                        <motion.li
+                          key={link.name}
+                          initial={{ opacity: 0, x: -10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.4, delay: index * 0.1 }}
+                          viewport={{ once: true }}
                         >
-                          <span className="text-sm">{link.name}</span>
-                          <ExternalLink className="ml-1 h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                        </a>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </motion.div>
-              ))}
+                          <a
+                            href={link.href}
+                            className="group flex items-center text-gray-600 transition-colors hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                          >
+                            <span className="text-sm">{link.name}</span>
+                            <ExternalLink className="ml-1 h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                          </a>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -182,9 +192,9 @@ export function Footer() {
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
-          className="mt-12 flex flex-col items-center justify-between space-y-4 border-t border-gray-200 pt-8 dark:border-gray-800 sm:flex-row sm:space-y-0"
+          className="mt-12 flex items-center justify-end space-y-4 border-t border-gray-200 pt-8 dark:border-gray-800 sm:flex-row sm:space-y-0"
         >
-          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+          {/* <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span>Made with</span>
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
@@ -193,13 +203,19 @@ export function Footer() {
               <Heart className="h-4 w-4 text-red-500" />
             </motion.div>
             <span>for the Solana community</span>
-          </div>
-          
+          </div> */}
+
           <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-            <a href="#privacy" className="hover:text-gray-900 dark:hover:text-gray-100">
+            <a
+              href="#privacy"
+              className="hover:text-gray-900 dark:hover:text-gray-100"
+            >
               Privacy Policy
             </a>
-            <a href="#terms" className="hover:text-gray-900 dark:hover:text-gray-100">
+            <a
+              href="#terms"
+              className="hover:text-gray-900 dark:hover:text-gray-100"
+            >
               Terms of Service
             </a>
             <span>© 2024 SolanaVault. All rights reserved.</span>

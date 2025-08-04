@@ -31,7 +31,9 @@ import {
   Info,
   HelpCircle,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 type ActiveTab = "collection" | "nft" | "verify" | "my-nfts";
@@ -143,6 +145,19 @@ export function NFTContainer() {
       transition={{ duration: 0.5 }}
       className="w-full max-w-6xl mx-auto space-y-8"
     >
+      {/* Back to Home */}
+      <div className="flex justify-between items-center">
+        <Link href="/dashboard">
+          <Button
+            // onClick={() => window.history.back()}
+            variant="outline"
+            className="border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       {/* Header Card */}
       <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"></div>

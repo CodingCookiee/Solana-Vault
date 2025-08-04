@@ -21,6 +21,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  PlaneLanding,
 } from "lucide-react";
 import { Text, Button } from "@/components/ui/common";
 import { Card, CardContent } from "@/components/ui/common";
@@ -54,6 +55,26 @@ export function DashboardLayout({
     logout();
     toast.success("Logged out successfully");
     router.push("/");
+  };
+
+  // Smooth scroll function with offset for fixed header
+  const handleSmoothScroll = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    targetId: string
+  ) => {
+    e.preventDefault();
+    const element = document.getElementById(targetId);
+    if (element) {
+      const headerHeight = 80; // Approximate header height
+      const elementPosition =
+        element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - headerHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
   };
 
   // Loading state
@@ -246,19 +267,31 @@ export function DashboardLayout({
                           icon: LayoutDashboard,
                         },
                         {
+                          name: "Air Drop",
+                          href: "#airdrop",
+                          icon: PlaneLanding,
+                          isAnchor: true,
+                        },
+                        {
                           name: "Transactions",
                           href: "#transactions",
                           icon: ArrowRight,
+                          isAnchor: true,
                         },
-                        { name: "Tokens", href: "#airdrop", icon: Wallet },
-                        { name: "NFT Studio", href: "#nfts", icon: Bell },
+                        { name: "Tokens", href: "/spl", icon: Wallet },
+                        { name: "NFT Studio", href: "/nft", icon: Bell },
                         { name: "Security", href: "#", icon: Shield },
                         { name: "Settings", href: "#", icon: Settings },
                         { name: "Help", href: "#", icon: HelpCircle },
                       ].map((item) => (
-                        <Link
+                        <a
                           key={item.name}
                           href={item.href}
+                          onClick={
+                            item.isAnchor
+                              ? (e) => handleSmoothScroll(e, item.href.slice(1))
+                              : undefined
+                          }
                           className="flex items-center justify-between p-2.5 rounded-lg text-sm font-medium text-gray-700 transition-colors hover:text-purple-600 hover:bg-purple-50 dark:text-gray-300 dark:hover:text-purple-400 dark:hover:bg-purple-900/20 group"
                         >
                           <div className="flex items-center">
@@ -266,7 +299,7 @@ export function DashboardLayout({
                             <span>{item.name}</span>
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-1" />
-                        </Link>
+                        </a>
                       ))}
                     </nav>
                   </div>

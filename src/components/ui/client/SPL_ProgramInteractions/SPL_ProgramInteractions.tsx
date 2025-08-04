@@ -14,6 +14,7 @@ import {
   Text,
   Button,
 } from "@/components/ui/common";
+import Link from "next/link";
 
 import { TokenCreationForm } from "./TokenCreationForm";
 import { TokenOperations } from "./TokenOperations";
@@ -36,6 +37,7 @@ import {
   Copy,
   RefreshCw,
   Star,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -247,6 +249,20 @@ export const SPLProgramInteractions: React.FC = () => {
         transition={{ duration: 0.5 }}
         className="max-w-7xl mx-auto space-y-8"
       >
+        {/* Back to Home */}
+        <div className="flex justify-between items-center">
+          <Link href="/dashboard">
+            <Button
+              // onClick={() => window.history.back()}
+              variant="outline"
+              className="border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
+
         {/* Hero Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
