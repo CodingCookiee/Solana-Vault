@@ -325,7 +325,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                   </Button>
                 </div>
               ) : (
-                <div className="py-8">
+                <div className="py-8 flex flex-col items-center justify-center">
                   <FileImage className="h-8 w-8 text-gray-400 mx-auto mb-4" />
                   <Text variant="small" color="muted" className="mb-4">
                     Upload token logo or icon
@@ -343,6 +343,7 @@ https://explorer.solana.com/address/${result.signature}?cluster=devnet`);
                   </Button>
                 </div>
               )}
+
               <input
                 id="token-image"
                 type="file"
