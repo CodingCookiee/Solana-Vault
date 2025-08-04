@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   Copy,
   ExternalLink,
   X,
@@ -30,6 +31,7 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface AccountReaderProps {
   accountToRead: string;
@@ -92,6 +94,19 @@ export const AccountReader: React.FC<AccountReaderProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Back to Dashboard */}
+      <div className="flex justify-between items-center">
+        <Link href="/dashboard">
+          <Button
+            // onClick={() => window.history.back()}
+            variant="outline"
+            className="mb-4 text-sm font-medium flex items-center gap-2  border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
 

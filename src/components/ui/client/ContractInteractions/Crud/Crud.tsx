@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   Copy,
   ExternalLink,
   X,
@@ -33,6 +34,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 /**
  * CRUD Interface Component
@@ -249,6 +251,19 @@ export const Crud: React.FC = () => {
       transition={{ duration: 0.5 }}
       className="max-w-7xl mx-auto space-y-6"
     >
+      {/* Back to Dashboard */}
+      <div className="flex justify-between items-center">
+        <Link href="/dashboard">
+          <Button
+            // onClick={() => window.history.back()}
+            variant="outline"
+            className="mb-4 text-sm font-medium flex items-center gap-2  border-green-200 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

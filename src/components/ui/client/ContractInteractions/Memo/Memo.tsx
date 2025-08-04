@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   Copy,
   ExternalLink,
   X,
@@ -25,6 +26,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface MemoProps {
   memoText: string;
@@ -72,6 +74,20 @@ export const Memo: React.FC<MemoProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+
+       {/* Back to Dashboard */}
+        <div className="flex justify-between items-center">
+          <Link href="/dashboard">
+            <Button
+              // onClick={() => window.history.back()}
+              variant="outline"
+              className="mb-4 text-sm font-medium flex items-center gap-2  border-green-200 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
       <Card className="border border-white/20 dark:border-gray-800/20 backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
         
