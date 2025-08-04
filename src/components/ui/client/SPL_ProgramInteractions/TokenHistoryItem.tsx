@@ -312,7 +312,7 @@ const TokenActions: React.FC<{
           // Only call onSelect if the token isn't already selected
           if (!isSelected) {
             onSelect(token.mintAddress);
-            toast.success("Token selected for operations");
+            // toast.success("Token selected for operations");
           }
         }}
         variant="outline"
