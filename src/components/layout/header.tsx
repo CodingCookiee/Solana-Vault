@@ -2,23 +2,16 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Wallet, 
-  Menu, 
-  X, 
-  Sun, 
-  Moon, 
-  Zap,
-  Coins
-} from "lucide-react";
+import { Wallet, Menu, X, Sun, Moon, Zap, Coins } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/common/button";
 import { Text } from "@/components/ui/common/text";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {  useRouter } from 'next/navigation';
- 
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+
 export function Header() {
-  const { router} = useRouter();
+  const { router } = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { connected, publicKey, disconnect } = useWallet();
@@ -30,28 +23,43 @@ export function Header() {
   ];
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="sticky top-0 z-50 border-b border-white/10 bg-white/80 backdrop-blur-lg dark:bg-gray-900/80"
     >
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between" onClick={() => router.push('/')}>
+        <div
+          className="flex h-16 items-center justify-between"
+          onClick={() => router.push("/")}
+        >
           {/* Logo */}
-          <motion.div 
+          <motion.div
             className="flex items-center space-x-3"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <div className="relative">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 p-2 shadow-lg">
-                <Wallet className="h-full w-full text-white"/>
+              <div className="h-10 w-10 rounded-xl p-2 shadow-lg bg-gradient-to-r from-purple-300 to-blue-300  ">
+                {/* <Wallet className="h-full w-full text-white"/>
+                 */}
+                <Image
+                  src="/favicon.png"
+                  alt="Logo"
+                  className="h-full w-full object-cover rounded-lg"
+                  width={40}
+                  height={40}
+                />
               </div>
               <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 shadow-sm animate-pulse" />
             </div>
             <div>
-              <Text variant="h3" weight="bold" className="text-gray-900 dark:text-white">
+              <Text
+                variant="h3"
+                weight="bold"
+                className="text-gray-900 dark:text-white"
+              >
                 SolanaVault
               </Text>
               <Text variant="extraSmall" color="muted">
@@ -121,8 +129,13 @@ export function Header() {
                 className="hidden sm:flex items-center space-x-2 rounded-lg bg-green-50 px-3 py-1.5 dark:bg-green-900/20"
               >
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <Text variant="extraSmall" weight="medium" className="text-green-700 dark:text-green-400">
-                  {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+                <Text
+                  variant="extraSmall"
+                  weight="medium"
+                  className="text-green-700 dark:text-green-400"
+                >
+                  {publicKey.toString().slice(0, 4)}...
+                  {publicKey.toString().slice(-4)}
                 </Text>
               </motion.div>
             )}
@@ -186,7 +199,7 @@ export function Header() {
                     <span>{item.name}</span>
                   </motion.a>
                 ))}
-                
+
                 {connected && publicKey && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -195,8 +208,13 @@ export function Header() {
                     className="flex items-center space-x-3 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20"
                   >
                     <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <Text variant="small" weight="medium" className="text-green-700 dark:text-green-400">
-                      Connected: {publicKey.toString().slice(0, 8)}...{publicKey.toString().slice(-8)}
+                    <Text
+                      variant="small"
+                      weight="medium"
+                      className="text-green-700 dark:text-green-400"
+                    >
+                      Connected: {publicKey.toString().slice(0, 8)}...
+                      {publicKey.toString().slice(-8)}
                     </Text>
                   </motion.div>
                 )}

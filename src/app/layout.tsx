@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  icon: "/favicon.png",
   title: "SolanaVault - Web3 Wallet Suite",
   description:
     "Securely manage your Solana assets with our next-generation wallet interface.",
