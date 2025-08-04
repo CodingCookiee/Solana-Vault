@@ -32,7 +32,7 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
 };
@@ -97,7 +97,7 @@ export default function ConnectWalletPage() {
                   Connect Your Wallet
                 </h1>
                 <Text
-                  variant="large"
+                  variant="body"
                   color="muted"
                   align="center"
                   className="mx-auto max-w-2xl leading-relaxed"

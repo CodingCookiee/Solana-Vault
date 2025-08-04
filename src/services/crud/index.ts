@@ -12,29 +12,22 @@ export * from "./crud.anchor";
 
 // Re-export commonly used functions for convenience
 export {
-  initializeUserEntries,
   createCrudEntry,
   updateCrudEntry,
   deleteCrudEntry,
   getCrudEntry,
   getUserCrudEntries,
-  getUserEntriesAccountData,
   validateCrudEntry,
   validateTitle,
   isProgramDeployed,
   getProgramInfo,
 } from "./crud.service";
 
-export {
-  useCrudService,
-  useUserCrudEntries,
-  useUserEntriesAccount,
-} from "./crud.hooks";
+export { useCrudService, useUserCrudEntries } from "./crud.hooks";
 
 export {
   getAnchorProgram,
-  deriveUserEntriesPDA,
-  isUserEntriesInitialized,
-  getUserEntriesAccount,
+  deriveCrudEntryPDA,
+  checkCrudEntryExists,
   getReadOnlyProgram,
 } from "./crud.anchor";

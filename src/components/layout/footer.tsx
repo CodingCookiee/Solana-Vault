@@ -62,7 +62,7 @@ export function Footer() {
           viewport={{ once: true }}
           className="mb-12"
         >
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 items-center justify-items-center">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -72,7 +72,7 @@ export function Footer() {
                 viewport={{ once: true }}
                 className="text-center"
               >
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 shadow-lg">
+                <div className=" mb-3  flex flex-col h-12 w-20 items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 shadow-lg">
                   <stat.icon className="h-6 w-6 text-white" />
                 </div>
                 <Text variant="h2" weight="bold" className="mb-1">

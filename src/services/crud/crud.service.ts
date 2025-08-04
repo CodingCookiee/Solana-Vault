@@ -11,7 +11,7 @@ import {
   ValidationResult,
   PROGRAM_ID,
 } from "./crud.types";
-import { getAnchorProgram, deriveCrudEntryPDA } from "./crud.anchor";
+import { getAnchorProgram, deriveCrudEntryPDA, initializeUserEntries } from "./crud.anchor";
 
 /**
  * Create a new CRUD entry using Anchor
