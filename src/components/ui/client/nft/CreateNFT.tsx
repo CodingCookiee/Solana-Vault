@@ -63,6 +63,15 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  const validateCollectionMint = (address: string): boolean => {
+    if (!address.trim()) return true; // Optional field
+    try {
+      new PublicKey(address);
+      return true;
+    } catch {
+      return false;
+    }
+  };
   // Compute form validation state
   const isFormValid =
     formData.name.trim() !== "" &&
@@ -88,16 +97,6 @@ export function CreateNFT({ collectionMint, onNFTCreated }: CreateNFTProps) {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const validateCollectionMint = (address: string): boolean => {
-    if (!address.trim()) return true; // Optional field
-    try {
-      new PublicKey(address);
-      return true;
-    } catch {
-      return false;
     }
   };
 
