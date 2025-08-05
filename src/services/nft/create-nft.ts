@@ -80,13 +80,11 @@ export async function createNFT(
       creators: [
         {
           address: wallet.publicKey,
-          verified: true,
           share: 100,
         },
       ],
       isMutable: true,
       maxSupply: 0, // 0 means unlimited supply
-     
     };
 
     // Add collection if provided
@@ -135,7 +133,6 @@ export async function createNFT(
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // Try to find the created NFT by checking recent transactions or user's NFTs
-          // This is a simplified approach - in production you might want to query recent transactions
           throw new Error(
             "NFT may have been created successfully. Please check your wallet and refresh the page."
           );

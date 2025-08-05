@@ -11,7 +11,7 @@ import {
   ValidationResult,
   PROGRAM_ID,
 } from "./crud.types";
-import { getAnchorProgram, deriveCrudEntryPDA, initializeUserEntries } from "./crud.anchor";
+import { getAnchorProgram, deriveCrudEntryPDA } from "./crud.anchor";
 
 /**
  * Create a new CRUD entry using Anchor
@@ -81,11 +81,18 @@ export const createCrudEntry = async (
 
     const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
+    // Map Anchor decoded struct to CrudEntryState
+    const entryData: CrudEntryState = {
+      owner: crudEntryData.owner,
+      title: crudEntryData.title,
+      message: crudEntryData.message,
+    };
+
     return {
       signature: txn,
       success: true,
       explorerUrl,
-      data: crudEntryData,
+      data: entryData,
       pda: crudEntryPda.toString(),
     };
   } catch (error) {
@@ -163,11 +170,18 @@ export const updateCrudEntry = async (
 
     const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
+    // Map Anchor decoded struct to CrudEntryState
+    const entryData: CrudEntryState = {
+      owner: crudEntryData.owner,
+      title: crudEntryData.title,
+      message: crudEntryData.message,
+    };
+
     return {
       signature: txn,
       success: true,
       explorerUrl,
-      data: crudEntryData,
+      data: entryData,
       pda: crudEntryPda.toString(),
     };
   } catch (error) {
@@ -283,7 +297,14 @@ export const getCrudEntry = async (
       crudEntryPda
     );
 
-    return crudEntryData;
+    // Map Anchor decoded struct to CrudEntryState
+    const entryData: CrudEntryState = {
+      owner: crudEntryData.owner,
+      title: crudEntryData.title,
+      message: crudEntryData.message,
+    };
+
+    return entryData;
   } catch (error) {
     console.error("Error getting CRUD entry:", error);
     return null;
@@ -325,9 +346,11 @@ export const getUserCrudEntries = async (
     console.log(`Found ${programAccounts.length} accounts for owner`);
 
     // Extract account data
-    const entries: CrudEntryState[] = programAccounts.map(
-      (account) => account.account
-    );
+    const entries: CrudEntryState[] = programAccounts.map((account) => ({
+      owner: account.account.owner,
+      title: account.account.title,
+      message: account.account.message,
+    }));
 
     return entries;
   } catch (error) {

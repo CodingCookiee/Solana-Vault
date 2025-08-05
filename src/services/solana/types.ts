@@ -10,7 +10,7 @@ export interface AccountInfo {
   lamports: number;
   dataLength: number;
   executable: boolean;
-  rentEpoch: number;
+  rentEpoch: number | undefined;
   data?: string;
   explorerUrl: string;
 }

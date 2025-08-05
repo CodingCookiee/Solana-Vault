@@ -59,22 +59,11 @@ export async function uploadImage(
     );
 
     // Try a direct upload to arweave.net for development purposes
-    const uploadResult = await metaplex.storage().upload(metaplexFile);
+    const uploadResult: string = await metaplex.storage().upload(metaplexFile);
     console.log("Upload result:", uploadResult);
 
-    // Handle both string and object with uri property
-    let uri: string;
-    if (typeof uploadResult === "string") {
-      uri = uploadResult;
-    } else if (
-      uploadResult &&
-      typeof uploadResult === "object" &&
-      "uri" in uploadResult
-    ) {
-      uri = uploadResult.uri;
-    } else {
-      throw new Error("File upload failed - no valid URI returned");
-    }
+    // uploadResult is always a string
+    let uri: string = uploadResult;
 
     if (!uri) {
       throw new Error("File upload failed - empty URI returned");

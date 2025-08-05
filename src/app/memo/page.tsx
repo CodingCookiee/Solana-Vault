@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -30,15 +31,14 @@ export default function MemoPage() {
     try {
       setStatus("⏳ Sending memo...");
       const result = await memoService.sendMemo(memoText);
-      
-      setStatus(`✅ Memo sent successfully!`);
-        if (result.data?.explorerUrl) {
-          setStatus(
-            `✅ Memo sent! View on Explorer: ${result.data.explorerUrl}`
-          );
-        }
-       else {
+      if (!result.success) {
         setStatus(`❌ Error: ${result.error}`);
+      } else if (result.data?.explorerUrl) {
+        setStatus(
+          `✅ Memo sent! View on Explorer: ${result.data.explorerUrl}`
+        );
+      } else {
+        setStatus("✅ Memo sent successfully!");
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

@@ -12,9 +12,14 @@ import { SystemTransferResult, SystemAccountResult } from "./system.types";
 /**
  * Transfer SOL between accounts
  */
+export interface WalletWithSendTransaction {
+  publicKey: PublicKey;
+  sendTransaction: (transaction: Transaction, connection: Connection, options?: any) => Promise<string>;
+}
+
 export const transferSol = async (
   connection: Connection,
-  wallet: AnchorWallet,
+  wallet: WalletWithSendTransaction,
   recipientAddress: PublicKey,
   amount: number
 ): Promise<SystemTransferResult> => {
@@ -43,11 +48,7 @@ export const transferSol = async (
     return {
       signature,
       success: true,
-      data: {
-        amount,
-        recipient: recipientAddress,
-        explorerUrl: `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`,
-      },
+      explorerUrl: `${SOLANA_EXPLORER_BASE_URL}/tx/${signature}?cluster=${CLUSTER}`,
     };
   } catch (error) {
     console.error("Error transferring SOL:", error);
@@ -64,7 +65,7 @@ export const transferSol = async (
  */
 export const createDataAccount = async (
   connection: Connection,
-  wallet: AnchorWallet,
+  wallet: WalletWithSendTransaction,
   dataSize: number = 100
 ): Promise<SystemAccountResult> => {
   try {
@@ -100,18 +101,14 @@ export const createDataAccount = async (
     return {
       signature,
       success: true,
-      data: {
-        accountAddress: dataAccount.publicKey.toBase58(),
-        lamports,
-        dataSize,
-        explorerUrl: `${SOLANA_EXPLORER_BASE_URL}/address/${dataAccount.publicKey.toBase58()}?cluster=${CLUSTER}`,
-      },
+      accountAddress: dataAccount.publicKey.toBase58(),
     };
   } catch (error) {
     console.error("Error creating data account:", error);
     return {
       signature: "",
       success: false,
+      accountAddress: "",
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }

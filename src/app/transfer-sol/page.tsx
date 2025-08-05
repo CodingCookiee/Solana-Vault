@@ -51,8 +51,8 @@ export default function TransferSolPage() {
       
       if (result.success) {
         setStatus(`✅ Transferred ${amount} SOL successfully!`);
-        if (result?.data.explorerUrl) {
-          setStatus(`✅ Transfer successful! View on Explorer: ${result.data.explorerUrl}`);
+        if (result?.explorerUrl) {
+          setStatus(`✅ Transfer successful! View on Explorer: ${result.explorerUrl}`);
         }
       } else {
         setStatus(`❌ Error: ${result.error}`);

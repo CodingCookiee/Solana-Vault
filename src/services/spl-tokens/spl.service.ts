@@ -752,7 +752,7 @@ export const getOwnedTokens = async (
             Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
           mintAuthority: mintInfo.mintAuthority?.toBase58() || null,
           freezeAuthority: mintInfo.freezeAuthority?.toBase58() || null,
-          metadata,
+          metadata: metadata ?? undefined,
           userBalance: balance,
           tokenAccount: tokenAccountPubkey.toBase58(),
         };

@@ -8,6 +8,7 @@ import {
   hasSufficientBalance,
 } from "./system.service";
 import { SystemTransferResult, SystemAccountResult } from "./system.types";
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * Hook for system program interactions
@@ -52,7 +53,7 @@ export const useSystemService = () => {
         const result = await transferSol(
           connection,
           wallet as any,
-          recipientAddress,
+          new PublicKey(recipientAddress),
           amount
         );
 
@@ -126,7 +127,7 @@ export const useSystemService = () => {
           throw new Error("No address provided and wallet not connected");
         }
 
-        return await getAccountBalance(connection, targetAddress);
+        return await getAccountBalance(connection, new PublicKey(targetAddress));
       } catch (err) {
         console.error("Error getting balance:", err);
         return 0;
@@ -141,7 +142,7 @@ export const useSystemService = () => {
         const targetAddress = address || wallet.publicKey?.toString();
         if (!targetAddress) return false;
 
-        return await hasSufficientBalance(connection, targetAddress, amount);
+        return await hasSufficientBalance(connection, new PublicKey(targetAddress), amount);
       } catch (err) {
         console.error("Error checking balance:", err);
         return false;

@@ -46,11 +46,10 @@ export async function fetchWalletNFTs(
         try {
           console.log("Processing NFT:", nft.address.toString());
 
-          // Load full NFT data with metadata
-          const fullNft = await metaplex.nfts().load({
-            metadata: nft,
-            loadJsonMetadata: true,
-          });
+          // If nft already has all properties, skip loading
+          const fullNft = 'model' in nft && nft.model === 'metadata'
+            ? await metaplex.nfts().load({ metadata: nft, loadJsonMetadata: true })
+            : nft;
 
           let imageUri = "";
           let description = "";
@@ -86,7 +85,7 @@ export async function fetchWalletNFTs(
             uri: imageUri,
             image: imageUri,
             collection: fullNft.collection?.address,
-            creator: wallet.publicKey,
+            creator: wallet.publicKey!,
             verified: fullNft.collection?.verified || false,
             isCollection: !!fullNft.collectionDetails,
             createdAt: new Date(), // We can't get exact creation date from on-chain data easily
@@ -189,7 +188,7 @@ export async function getWalletNFTDetails(
       uri: imageUri,
       image: imageUri,
       collection: nft.collection?.address,
-      creator: wallet.publicKey,
+      creator: wallet.publicKey!,
       verified: nft.collection?.verified || false,
       isCollection: !!nft.collectionDetails,
       createdAt: new Date(),

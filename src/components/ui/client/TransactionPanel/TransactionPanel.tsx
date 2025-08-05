@@ -466,7 +466,7 @@ export const TransactionPanel: FC = () => {
                   !recipient ||
                   !amount ||
                   !isValidSolanaAddress(recipient) ||
-                  (balance && parseFloat(amount) > balance)
+                  (balance !== null && parseFloat(amount) > balance)
                 }
                 className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg group border-0"
                 size="lg"

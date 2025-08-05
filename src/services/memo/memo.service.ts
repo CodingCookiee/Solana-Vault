@@ -21,8 +21,8 @@ export const sendMemoMessage = async (
   message: string
 ): Promise<MemoServiceResult> => {
   try {
-    if (!wallet.sendTransaction) {
-      throw new Error("Wallet does not support sending transactions");
+    if (!wallet.signTransaction) {
+      throw new Error("Wallet does not support signing transactions");
     }
 
     if (!message.trim()) {
@@ -46,8 +46,15 @@ export const sendMemoMessage = async (
 
     transaction.add(memoInstruction);
 
+    // Set recent blockhash and fee payer
+    transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    // Sign transaction
+    const signedTx = await wallet.signTransaction(transaction);
+
     // Send transaction
-    const signature = await wallet.sendTransaction(transaction, connection);
+    const signature = await connection.sendRawTransaction(signedTx.serialize());
 
     // Wait for confirmation
     await connection.confirmTransaction(signature, "processed");

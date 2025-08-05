@@ -1,4 +1,4 @@
-import { SolanaServiceResult } from "@/services/index";
+import { SolanaServiceResult } from "../solana/types";
 
 export interface MemoServiceResult extends SolanaServiceResult {
   data?: {

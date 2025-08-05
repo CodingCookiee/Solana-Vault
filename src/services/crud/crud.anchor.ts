@@ -9,7 +9,7 @@ import { PROGRAM_ID, CRUDAPP_IDL, Crudapp } from "./crud.types";
 export const getAnchorProgram = (
   connection: Connection,
   wallet: AnchorWallet
-): Program<Crudapp> => {
+): Program<typeof CRUDAPP_IDL> => {
   const provider = new AnchorProvider(connection, wallet, {
     preflightCommitment: "confirmed",
   });
@@ -36,7 +36,7 @@ export const deriveCrudEntryPDA = async (
 export const getReadOnlyProgram = (
   connection: Connection,
   publicKey: web3.PublicKey
-): Program<Crudapp> => {
+): Program<typeof CRUDAPP_IDL> => {
   // Create a dummy wallet for read operations
   const dummyWallet = {
     publicKey,

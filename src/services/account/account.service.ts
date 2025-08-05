@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SOLANA_EXPLORER_BASE_URL, CLUSTER } from "../solana/constants";
-import { AccountInfo, TransactionInfo } from "../types";
+import { AccountInfo, TransactionInfo } from "../solana/types";
 import { AccountExistsResult, ProgramAccountInfo } from "./account.types";
 
 /**
@@ -74,16 +74,15 @@ export const getAccountTransactions = async (
   try {
     const signatures = await connection.getSignaturesForAddress(
       accountAddress,
-      { limit },
-      "processed"
+      { limit }
     );
 
     return signatures.map((sig) => ({
       signature: sig.signature,
       slot: sig.slot,
-      blockTime: sig.blockTime,
-      confirmationStatus: sig.confirmationStatus,
-      err: sig.err,
+      blockTime: sig.blockTime ?? null,
+      confirmationStatus: sig.confirmationStatus ?? null,
+      err: sig.err ?? null,
       explorerUrl: `${SOLANA_EXPLORER_BASE_URL}/tx/${sig.signature}?cluster=${CLUSTER}`,
     }));
   } catch (error) {

@@ -7,7 +7,7 @@ import {
   getAccountTransactions,
   isValidPublicKey,
 } from "./account.service";
-import { AccountInfo, TransactionInfo } from "@/services/index";
+import { AccountInfo, TransactionInfo } from "../solana/types";
 import { AccountExistsResult } from "./account.types";
 
 /**
