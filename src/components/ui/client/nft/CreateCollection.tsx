@@ -145,12 +145,12 @@ export function CreateCollection({
 
       // // Create the collection
       // console.log("Creating collection...");
-      // const collection = await create({
-      //   name: formData.name,
-      //   symbol: formData.symbol,
-      //   description: formData.description,
-      //   uri: String(imageUri),
-      // });
+      const collection = await create({
+        name: formData.name,
+        symbol: formData.symbol,
+        description: formData.description,
+        uri: String(imageUri),
+      });
 
       if (collection) {
         // console.log("Collection created successfully:", collection);
