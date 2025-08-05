@@ -45,7 +45,7 @@ export const createCrudEntry = async (
       wallet.publicKey
     );
 
-    console.log("PDA derived:", crudEntryPda.toString());
+    // console.log("PDA derived:", crudEntryPda.toString());
 
     // Check if entry already exists
     try {
@@ -72,7 +72,7 @@ export const createCrudEntry = async (
       }
     );
 
-    console.log("Transaction signature:", txn);
+    // console.log("Transaction signature:", txn);
 
     // Fetch the created CRUD entry data
     const crudEntryData = await program.account.crudEntryState.fetch(
@@ -161,7 +161,7 @@ export const updateCrudEntry = async (
       }
     );
 
-    console.log("Transaction signature:", txn);
+    // console.log("Transaction signature:", txn);
 
     // Fetch the updated CRUD entry data
     const crudEntryData = await program.account.crudEntryState.fetch(
@@ -246,7 +246,7 @@ export const deleteCrudEntry = async (
       },
     });
 
-    console.log("Transaction signature:", txn);
+    // console.log("Transaction signature:", txn);
 
     const explorerUrl = `${SOLANA_EXPLORER_BASE_URL}/tx/${txn}?cluster=${CLUSTER}`;
 
@@ -343,7 +343,7 @@ export const getUserCrudEntries = async (
       },
     ]);
 
-    console.log(`Found ${programAccounts.length} accounts for owner`);
+    // console.log(`Found ${programAccounts.length} accounts for owner`);
 
     // Extract account data
     const entries: CrudEntryState[] = programAccounts.map((account) => ({

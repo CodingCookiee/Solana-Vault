@@ -8,10 +8,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self'; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.solana.com https://*.solflare.com wss://*.solana.com wss://*.solflare.com;"
-        },
+      
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"

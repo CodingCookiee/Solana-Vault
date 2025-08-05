@@ -25,11 +25,11 @@ export async function verifyNFTInCollection(
   }
 
   try {
-    console.log("Starting NFT verification with params:", {
-      nftMint: params.nftMint.toString(),
-      collectionMint: params.collectionMint.toString(),
-      creator: params.creator.toString(),
-    });
+    // console.log("Starting NFT verification with params:", {
+    //   nftMint: params.nftMint.toString(),
+    //   collectionMint: params.collectionMint.toString(),
+    //   creator: params.creator.toString(),
+    // });
 
     // Mark transaction as pending
     pendingVerificationTransactions.add(transactionKey);
@@ -54,7 +54,7 @@ export async function verifyNFTInCollection(
 
     while (retryCount < maxRetries) {
       try {
-        console.log(`Verification attempt ${retryCount + 1}/${maxRetries}`);
+        // console.log(`Verification attempt ${retryCount + 1}/${maxRetries}`);
 
         await metaplex.nfts().verifyCollection(
           {
@@ -68,15 +68,15 @@ export async function verifyNFTInCollection(
         );
 
         success = true;
-        console.log("NFT verification successful");
+        // console.log("NFT verification successful");
         break;
       } catch (error: any) {
         retryCount++;
 
         if (error.message?.includes("already been processed")) {
-          console.log(
-            "Transaction already processed, checking verification status..."
-          );
+          // console.log(
+          //   "Transaction already processed, checking verification status..."
+          // );
 
           // Wait a bit for the transaction to settle
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -89,7 +89,7 @@ export async function verifyNFTInCollection(
               params.nftMint
             );
             if (nftDetails?.verified) {
-              console.log("NFT is already verified");
+              // console.log("NFT is already verified");
               success = true;
               break;
             }
@@ -103,7 +103,7 @@ export async function verifyNFTInCollection(
         }
 
         if (error.message?.includes("already verified")) {
-          console.log("NFT is already verified in this collection");
+          // console.log("NFT is already verified in this collection");
           success = true;
           break;
         }
@@ -124,10 +124,10 @@ export async function verifyNFTInCollection(
           throw error;
         }
 
-        console.log(
-          `Retry attempt ${retryCount}/${maxRetries} after error:`,
-          error.message
-        );
+        // console.log(
+        //   `Retry attempt ${retryCount}/${maxRetries} after error:`,
+        //   error.message
+        // );
         // Wait before retry with exponential backoff
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
       }
@@ -135,7 +135,7 @@ export async function verifyNFTInCollection(
 
     if (success) {
       // Update local storage verification status
-      console.log("NFT verification completed and storage updated");
+      // console.log("NFT verification completed and storage updated");
     }
 
     return success;
@@ -183,7 +183,7 @@ export async function getNFTDetails(
       walletAdapterIdentity(wallet)
     );
 
-    console.log("Fetching NFT details for:", mintAddress.toString());
+    // console.log("Fetching NFT details for:", mintAddress.toString());
     const nft = await metaplex.nfts().findByMint({
       mintAddress,
       // Add load JSON metadata
@@ -191,16 +191,16 @@ export async function getNFTDetails(
     });
 
     if (!nft) {
-      console.log("NFT not found");
+      // console.log("NFT not found");
       return null;
     }
 
-    console.log("NFT found:", {
-      name: nft.name,
-      symbol: nft.symbol,
-      collection: nft.collection?.address.toString(),
-      verified: nft.collection?.verified,
-    });
+    // console.log("NFT found:", {
+    //   name: nft.name,
+    //   symbol: nft.symbol,
+    //   collection: nft.collection?.address.toString(),
+    //   verified: nft.collection?.verified,
+    // });
 
     // Try to get metadata from JSON if available
     const metadata = nft.json as any;

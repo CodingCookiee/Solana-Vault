@@ -27,7 +27,7 @@ export function useImageUpload() {
         throw new Error("Only image files are allowed");
       }
 
-      console.log("Uploading token image to IPFS via Pinata...");
+      // console.log("Uploading token image to IPFS via Pinata...");
       const uri = await uploadToIPFS(file);
 
       if (!uri) {

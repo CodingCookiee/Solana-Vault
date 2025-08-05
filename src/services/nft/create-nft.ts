@@ -31,7 +31,7 @@ export async function createNFT(
   }
 
   try {
-    console.log("Starting NFT creation with params:", params);
+    // console.log("Starting NFT creation with params:", params);
 
     // Mark transaction as pending
     pendingTransactions.add(transactionKey);
@@ -65,11 +65,11 @@ export async function createNFT(
       ],
     };
 
-    console.log("Uploading NFT metadata...", metadata);
+    // console.log("Uploading NFT metadata...", metadata);
 
     // Upload metadata to IPFS
     const metadataUri = await uploadMetadataToIPFS(metadata);
-    console.log("NFT metadata uploaded to IPFS:", metadataUri);
+    // console.log("NFT metadata uploaded to IPFS:", metadataUri);
 
     // Prepare NFT creation input with additional uniqueness
     const nftInput: CreateNftInput = {
@@ -95,7 +95,7 @@ export async function createNFT(
             ? new PublicKey(params.collectionMint)
             : params.collectionMint;
 
-        console.log("Adding to collection:", collectionPublicKey.toString());
+        // console.log("Adding to collection:", collectionPublicKey.toString());
         nftInput.collection = collectionPublicKey;
       } catch (error) {
         console.warn(
@@ -105,8 +105,8 @@ export async function createNFT(
       }
     }
 
-    console.log("Creating NFT...");
-    console.log("Creating NFT with input:", nftInput);
+    // console.log("Creating NFT...");
+    // console.log("Creating NFT with input:", nftInput);
 
     // Create the NFT with retry logic
     let nft;
@@ -125,9 +125,9 @@ export async function createNFT(
         retryCount++;
 
         if (error.message?.includes("already been processed")) {
-          console.log(
-            "Transaction already processed, checking if NFT was created..."
-          );
+          // console.log(
+          //   "Transaction already processed, checking if NFT was created..."
+          // );
 
           // Wait a bit for the transaction to settle
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -142,10 +142,10 @@ export async function createNFT(
           throw error;
         }
 
-        console.log(
-          `Retry attempt ${retryCount}/${maxRetries} after error:`,
-          error.message
-        );
+        // console.log(
+        //   `Retry attempt ${retryCount}/${maxRetries} after error:`,
+        //   error.message
+        // );
         // Wait before retry with exponential backoff
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
       }
@@ -155,7 +155,7 @@ export async function createNFT(
       throw new Error("Failed to create NFT after multiple attempts");
     }
 
-    console.log("NFT created successfully:", nft.address.toString());
+    // console.log("NFT created successfully:", nft.address.toString());
 
     // Return NFT details
     const nftDetails: NFTDetails = {

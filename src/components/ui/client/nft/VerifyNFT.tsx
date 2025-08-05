@@ -146,7 +146,7 @@ export function VerifyNFT() {
       const nftMint = new PublicKey(formData.nftMint);
       const collectionMint = new PublicKey(formData.collectionMint);
 
-      console.log("Starting verification process...");
+      // console.log("Starting verification process...");
       const success = await verify({
         nftMint,
         collectionMint,
@@ -156,7 +156,7 @@ export function VerifyNFT() {
       if (success) {
         setVerificationSuccess(true);
         toast.success("NFT verification successful!");
-        console.log("Verification successful, refreshing NFT details...");
+        // console.log("Verification successful, refreshing NFT details...");
 
         // Refresh NFT details after verification
         const updatedDetails = await fetchDetails(formData.nftMint);

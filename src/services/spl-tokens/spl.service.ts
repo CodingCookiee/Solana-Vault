@@ -79,21 +79,21 @@ export const createToken = async (
       throw new Error("Token name and symbol are required");
     }
 
-    console.log("Creating token with form:", form);
+    // console.log("Creating token with form:", form);
 
     // Get minimum lamports for rent exemption
     const lamports = await getMinimumBalanceForRentExemptMint(connection);
 
     // Generate a new keypair for the mint
     const mintKeypair = Keypair.generate();
-    console.log("Generated mint keypair:", mintKeypair.publicKey.toBase58());
+    // console.log("Generated mint keypair:", mintKeypair.publicKey.toBase58());
 
     // Get associated token address
     const tokenATA = await getAssociatedTokenAddress(
       mintKeypair.publicKey,
       publicKey!
     );
-    console.log("Token ATA:", tokenATA.toBase58());
+    // console.log("Token ATA:", tokenATA.toBase58());
 
     // Create metadata object similar to NFT approach
     const metadata = {
@@ -122,11 +122,11 @@ export const createToken = async (
       ],
     };
 
-    console.log("Uploading token metadata to IPFS...", metadata);
+    // console.log("Uploading token metadata to IPFS...", metadata);
 
     // Upload metadata to IPFS using the same function as NFT
     const metadataUri = await uploadMetadataToIPFS(metadata);
-    console.log("Token metadata uploaded to IPFS:", metadataUri);
+    // console.log("Token metadata uploaded to IPFS:", metadataUri);
 
     // Create metadata PDA
     const [metadataPDA] = PublicKey.findProgramAddressSync(
@@ -138,7 +138,7 @@ export const createToken = async (
       METADATA_PROGRAM_ID
     );
 
-    console.log("Metadata PDA:", metadataPDA.toBase58());
+    // console.log("Metadata PDA:", metadataPDA.toBase58());
 
     // Create metadata instruction
     const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
@@ -202,7 +202,7 @@ export const createToken = async (
       createMetadataInstruction
     );
 
-    console.log("Sending transaction...");
+    // console.log("Sending transaction...");
     const signature = await sendTransaction(
       createNewTokenTransaction,
       connection,
@@ -211,7 +211,7 @@ export const createToken = async (
       }
     );
 
-    console.log("Transaction signature:", signature);
+    // console.log("Transaction signature:", signature);
 
     // Save created token to local storage with the new fields
     const createdToken: CreatedToken = {
@@ -379,10 +379,10 @@ export const transferTokens = async (
 
     // If destination account doesn't exist, create it first
     if (!destinationAccountInfo) {
-      console.log(
-        "Creating destination token account:",
-        destinationATA.toBase58()
-      );
+      // console.log(
+      //   "Creating destination token account:",
+      //   destinationATA.toBase58()
+      // );
       transaction.add(
         createAssociatedTokenAccountInstruction(
           publicKey!, // Payer
@@ -601,18 +601,18 @@ export const getCreatedTokens = async (
   try {
     ensureWalletConnected(publicKey);
 
-    console.log("Fetching created tokens for:", publicKey!.toBase58());
+    // console.log("Fetching created tokens for:", publicKey!.toBase58());
 
     // Since getProgramAccounts is not available for Token Program on many RPC endpoints,
     // we'll use a different approach - get transaction history and parse token creation transactions
     // For now, we'll return an empty array and suggest using a different approach
 
-    console.log(
-      "getProgramAccounts not available for Token Program on this RPC endpoint"
-    );
-    console.log(
-      "Consider using a custom RPC endpoint or storing created tokens locally"
-    );
+    // console.log(
+    //   "getProgramAccounts not available for Token Program on this RPC endpoint"
+    // );
+    // console.log(
+    //   "Consider using a custom RPC endpoint or storing created tokens locally"
+    // );
 
     return [];
   } catch (error) {
@@ -623,9 +623,9 @@ export const getCreatedTokens = async (
       error instanceof Error &&
       error.message.includes("excluded from account secondary indexes")
     ) {
-      console.log(
-        "RPC endpoint doesn't support getProgramAccounts for Token Program"
-      );
+      // console.log(
+      //   "RPC endpoint doesn't support getProgramAccounts for Token Program"
+      // );
       return [];
     }
 
@@ -710,7 +710,7 @@ export const getOwnedTokens = async (
   try {
     ensureWalletConnected(publicKey);
 
-    console.log("Fetching owned tokens for:", publicKey!.toBase58());
+    // console.log("Fetching owned tokens for:", publicKey!.toBase58());
 
     // Get all token accounts owned by the user
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
@@ -720,7 +720,7 @@ export const getOwnedTokens = async (
       }
     );
 
-    console.log(`Found ${tokenAccounts.value.length} token accounts`);
+    // console.log(`Found ${tokenAccounts.value.length} token accounts`);
 
     const ownedTokens: CreatedToken[] = [];
 
@@ -767,7 +767,7 @@ export const getOwnedTokens = async (
       }
     }
 
-    console.log(`Successfully processed ${ownedTokens.length} owned tokens`);
+    // console.log(`Successfully processed ${ownedTokens.length} owned tokens`);
     return ownedTokens.sort(
       (a, b) => (b.userBalance || 0) - (a.userBalance || 0)
     ); // Sort by balance descending
@@ -968,10 +968,10 @@ export const transferTokensFrom = async (
 
     // If destination account doesn't exist, create it first
     if (!destinationAccountInfo) {
-      console.log(
-        "Creating destination token account:",
-        destinationATA.toBase58()
-      );
+      // console.log(
+      //   "Creating destination token account:",
+      //   destinationATA.toBase58()
+      // );
       transaction.add(
         createAssociatedTokenAccountInstruction(
           publicKey!, // Payer (delegate)

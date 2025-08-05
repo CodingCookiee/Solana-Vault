@@ -6,11 +6,11 @@ interface PinataResponse {
 
 export async function uploadToIPFS(file: File): Promise<string> {
   // Debug environment variables - use NEXT_PUBLIC_ prefix for client-side access
-  console.log("Environment check:", {
-    apiKey: process.env.NEXT_PUBLIC_PINATA_API_KEY ? "Present" : "Missing",
-    secretKey: process.env.NEXT_PUBLIC_PINATA_SECRET_KEY ? "Present" : "Missing",
-    jwt: process.env.NEXT_PUBLIC_PINATA_JWT ? "Present" : "Missing",
-  });
+  // console.log("Environment check:", {
+  //   apiKey: process.env.NEXT_PUBLIC_PINATA_API_KEY ? "Present" : "Missing",
+  //   secretKey: process.env.NEXT_PUBLIC_PINATA_SECRET_KEY ? "Present" : "Missing",
+  //   jwt: process.env.NEXT_PUBLIC_PINATA_JWT ? "Present" : "Missing",
+  // });
 
   const PINATA_API_KEY = process.env.NEXT_PUBLIC_PINATA_API_KEY;
   const PINATA_SECRET_KEY = process.env.NEXT_PUBLIC_PINATA_SECRET_KEY;
@@ -52,7 +52,7 @@ async function uploadWithJWT(file: File, jwt: string): Promise<string> {
       })
     );
 
-    console.log("Uploading with JWT to Pinata...");
+    // console.log("Uploading with JWT to Pinata...");
     const response = await fetch(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       {
@@ -71,7 +71,7 @@ async function uploadWithJWT(file: File, jwt: string): Promise<string> {
     }
 
     const result: PinataResponse = await response.json();
-    console.log("Upload successful:", result);
+    // console.log("Upload successful:", result);
     return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
   } catch (error) {
     console.error("JWT upload error:", error);
@@ -104,7 +104,7 @@ async function uploadWithAPIKeys(
       })
     );
 
-    console.log("Uploading with API keys to Pinata...");
+    // console.log("Uploading with API keys to Pinata...");
     const response = await fetch(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       {
@@ -124,7 +124,7 @@ async function uploadWithAPIKeys(
     }
 
     const result: PinataResponse = await response.json();
-    console.log("Upload successful:", result);
+    // console.log("Upload successful:", result);
     return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
   } catch (error) {
     console.error("API keys upload error:", error);

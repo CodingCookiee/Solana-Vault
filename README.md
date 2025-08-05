@@ -10,7 +10,7 @@ A modern, feature-rich Next.js application for interacting with the Solana block
 5. 🖥️ [Application Structure](#app-structure)
 6. 🛠️ [Environment Setup](#env)
 
-## <a name='livedemo'>[🔗LiveDemo](https://solanavalut.vercel.app) </a>
+## <a name='livedemo'>[🔗LiveDemo](https://solanavault.vercel.app) </a>
 ![App Screenshot](./public/perview.png)
 
 ## <a name="features">📱 Features</a>

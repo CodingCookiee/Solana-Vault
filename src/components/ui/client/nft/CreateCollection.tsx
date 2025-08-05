@@ -132,7 +132,7 @@ export function CreateCollection({
       setCurrentStep(1); // Start uploading
 
       // Upload image first
-      console.log(`Starting image upload via ${uploadMethod}...`);
+      // console.log(`Starting image upload via ${uploadMethod}...`);
       const imageUri = await upload(imageFile);
 
       if (!imageUri) {
@@ -140,20 +140,20 @@ export function CreateCollection({
         throw new Error("Failed to upload image - storage upload failed");
       }
 
-      console.log("Image uploaded successfully:", String(imageUri));
+      // console.log("Image uploaded successfully:", String(imageUri));
       setCurrentStep(2); // Image uploaded, now creating collection
 
-      // Create the collection
-      console.log("Creating collection...");
-      const collection = await create({
-        name: formData.name,
-        symbol: formData.symbol,
-        description: formData.description,
-        uri: String(imageUri),
-      });
+      // // Create the collection
+      // console.log("Creating collection...");
+      // const collection = await create({
+      //   name: formData.name,
+      //   symbol: formData.symbol,
+      //   description: formData.description,
+      //   uri: String(imageUri),
+      // });
 
       if (collection) {
-        console.log("Collection created successfully:", collection);
+        // console.log("Collection created successfully:", collection);
         setCreatedCollection(collection);
         onCollectionCreated?.(collection);
         setCurrentStep(3); // Collection created successfully
@@ -168,7 +168,7 @@ export function CreateCollection({
       console.error("Error creating collection:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-      console.log(`Error: ${errorMessage}`);
+      // console.log(`Error: ${errorMessage}`);
       toast.error(errorMessage);
       setCurrentStep(0); // Reset to form input on error
     } finally {

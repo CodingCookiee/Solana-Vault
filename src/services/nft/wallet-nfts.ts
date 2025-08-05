@@ -25,7 +25,7 @@ export async function fetchWalletNFTs(
   }
 
   try {
-    console.log("Fetching NFTs from wallet:", wallet.publicKey.toString());
+    // console.log("Fetching NFTs from wallet:", wallet.publicKey.toString());
 
     const metaplex = Metaplex.make(connection).use(
       walletAdapterIdentity(wallet)
@@ -36,7 +36,7 @@ export async function fetchWalletNFTs(
       owner: wallet.publicKey,
     });
 
-    console.log(`Found ${nfts.length} NFTs in wallet`);
+    // console.log(`Found ${nfts.length} NFTs in wallet`);
 
     const walletNFTs: WalletNFT[] = [];
 
@@ -44,7 +44,7 @@ export async function fetchWalletNFTs(
     await Promise.allSettled(
       nfts.map(async (nft) => {
         try {
-          console.log("Processing NFT:", nft.address.toString());
+          // console.log("Processing NFT:", nft.address.toString());
 
           // If nft already has all properties, skip loading
           const fullNft = 'model' in nft && nft.model === 'metadata'
@@ -102,7 +102,7 @@ export async function fetchWalletNFTs(
       })
     );
 
-    console.log(`Successfully processed ${walletNFTs.length} NFTs`);
+    // console.log(`Successfully processed ${walletNFTs.length} NFTs`);
     return walletNFTs.sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     ); // Sort by newest first

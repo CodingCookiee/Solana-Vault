@@ -35,7 +35,7 @@ export async function uploadImage(
 
     // Check if we have enough SOL for storage
     const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`Wallet balance: ${balance / 1e9} SOL`);
+    // console.log(`Wallet balance: ${balance / 1e9} SOL`);
 
     if (balance < 1000000) {
       // Less than 0.001 SOL
@@ -54,13 +54,13 @@ export async function uploadImage(
       contentType: imageFile.type,
     });
 
-    console.log(
-      `Uploading file: ${imageFile.name}, size: ${fileData.length} bytes`
-    );
+    // console.log(
+    //   `Uploading file: ${imageFile.name}, size: ${fileData.length} bytes`
+    // );
 
     // Try a direct upload to arweave.net for development purposes
     const uploadResult: string = await metaplex.storage().upload(metaplexFile);
-    console.log("Upload result:", uploadResult);
+    // console.log("Upload result:", uploadResult);
 
     // uploadResult is always a string
     let uri: string = uploadResult;
@@ -69,7 +69,7 @@ export async function uploadImage(
       throw new Error("File upload failed - empty URI returned");
     }
 
-    console.log(`File uploaded successfully: ${uri}`);
+    // console.log(`File uploaded successfully: ${uri}`);
     return uri;
   } catch (error) {
     console.error("Error in uploadImage:", error);
@@ -125,7 +125,7 @@ export async function createCollection(
   }
 
   try {
-    console.log("Starting collection creation with params:", params);
+    // console.log("Starting collection creation with params:", params);
 
     // Mark transaction as pending
     pendingCollectionTransactions.add(transactionKey);
@@ -158,13 +158,13 @@ export async function createCollection(
       ],
     };
 
-    console.log("Uploading metadata to IPFS...", metadata);
+    // console.log("Uploading metadata to IPFS...", metadata);
 
     // Try to upload metadata to IPFS first
     let metadataUri: string;
     try {
       metadataUri = await uploadMetadataToIPFS(metadata);
-      console.log("Metadata uploaded to IPFS:", metadataUri);
+      // console.log("Metadata uploaded to IPFS:", metadataUri);
     } catch (ipfsError) {
       console.warn(
         "IPFS metadata upload failed, falling back to Arweave:",
@@ -196,11 +196,11 @@ export async function createCollection(
         throw new Error("Metadata upload failed - no valid URI returned");
       }
 
-      console.log("Metadata uploaded to Arweave:", metadataUri);
+      // console.log("Metadata uploaded to Arweave:", metadataUri);
     }
 
     // Create collection with retry logic
-    console.log("Creating collection NFT...");
+    // console.log("Creating collection NFT...");
     let nft;
     let retryCount = 0;
     const maxRetries = 3;
@@ -226,9 +226,9 @@ export async function createCollection(
         retryCount++;
 
         if (error.message?.includes("already been processed")) {
-          console.log(
-            "Transaction already processed, checking if collection was created..."
-          );
+          // console.log(
+          //   "Transaction already processed, checking if collection was created..."
+          // );
 
           // Wait a bit for the transaction to settle
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -242,10 +242,10 @@ export async function createCollection(
           throw error;
         }
 
-        console.log(
-          `Retry attempt ${retryCount}/${maxRetries} after error:`,
-          error.message
-        );
+        // console.log(
+        //   `Retry attempt ${retryCount}/${maxRetries} after error:`,
+        //   error.message
+        // );
         // Wait before retry with exponential backoff
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
       }
@@ -255,7 +255,7 @@ export async function createCollection(
       throw new Error("Failed to create collection after multiple attempts");
     }
 
-    console.log("Collection created:", nft.address.toString());
+    // console.log("Collection created:", nft.address.toString());
 
     return {
       mint: nft.address,

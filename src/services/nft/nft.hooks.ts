@@ -140,11 +140,11 @@ export function useImageUpload() {
       let uri: string;
 
       if (uploadMethod === "ipfs") {
-        console.log("Uploading to IPFS via Pinata...");
+        // console.log("Uploading to IPFS via Pinata...");
         uri = await uploadToIPFS(file);
       } else {
         console.log("Uploading to Arweave...");
-        uri = await uploadImage(connection, wallet, file);
+        // uri = await uploadImage(connection, wallet, file);
       }
 
       if (!uri) {
@@ -163,7 +163,7 @@ export function useImageUpload() {
         err instanceof Error &&
         err.message.includes("Arweave")
       ) {
-        console.log("Arweave failed, switching to IPFS...");
+        // console.log("Arweave failed, switching to IPFS...");
         setUploadMethod("ipfs");
         return null;
       }
@@ -244,7 +244,7 @@ export function useWalletNFTs() {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching NFTs from wallet...");
+      // console.log("Fetching NFTs from wallet...");
       const walletCollections = await fetchWalletCollections(
         connection,
         wallet
@@ -254,9 +254,9 @@ export function useWalletNFTs() {
       setCollections(walletCollections);
       setNfts(walletNFTs);
 
-      console.log(
-        `Loaded ${walletCollections.length} collections and ${walletNFTs.length} NFTs`
-      );
+      // console.log(
+      //   `Loaded ${walletCollections.length} collections and ${walletNFTs.length} NFTs`
+      // );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch wallet NFTs";
