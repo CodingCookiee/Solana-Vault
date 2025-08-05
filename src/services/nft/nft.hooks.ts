@@ -137,14 +137,14 @@ export function useImageUpload() {
         throw new Error("Only image files are allowed");
       }
 
-      let uri: string;
-
+      let uri: string | null = null;
       if (uploadMethod === "ipfs") {
         // console.log("Uploading to IPFS via Pinata...");
         uri = await uploadToIPFS(file);
       } else {
         console.log("Uploading to Arweave...");
         // uri = await uploadImage(connection, wallet, file);
+        uri = null; // Explicitly set uri to null for now
       }
 
       if (!uri) {
