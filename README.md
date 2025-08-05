@@ -6,7 +6,7 @@ A modern, feature-rich Next.js application for interacting with the Solana block
 1. 🔗 [Live Demo](#livedemo)
 2. 📱 [Features](#features)
 3. ⚙️ [Tech Stack](#tech-stack)
-4. 🚀 [Installation](#installation)****
+4. 🚀 [Installation](#installation)
 5. 🖥️ [Application Structure](#app-structure)
 6. 🛠️ [Environment Setup](#env)
 
