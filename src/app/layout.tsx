@@ -5,6 +5,7 @@ import { SolanaProvider } from "@/providers/SolanaProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/common";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -46,6 +48,7 @@ export default function RootLayout({
             </AuthProvider>
           </SolanaProvider>
         </ThemeProvider>
+        <SpeedInsights/>
       </body>
     </html>
   );
